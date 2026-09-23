@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Career Quest API",
-    "description": "Backend foundation. Recommendation and HR summary responses are explicit stubs. Completion and import return 501 without writes. All API routes require X-Role and X-Employee-Id; these headers are trusted development identities.",
+    "description": "Career Quest. Recommendations use explicit scoring and validated LLM selection. HR summary is a stub. Completion and import return 501 without writes. All API routes require X-Role and X-Employee-Id; these headers are trusted development identities.",
     "version": "0.1.0"
   },
   "paths": {
@@ -437,7 +437,7 @@
           "employees"
         ],
         "summary": "Get Recommendations",
-        "description": "Contract stub: no ranking, gap calculation or LLM calls.",
+        "description": "Recommend eligible events using explicit scores and validated optional LLM selection.",
         "operationId": "get_recommendations_api_employees__id__recommendations_get",
         "parameters": [
           {
@@ -1464,6 +1464,13 @@
             },
             "type": "array",
             "title": "Reasons"
+          },
+          "factors": {
+            "$ref": "#/components/schemas/RecommendationFactors"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
           }
         },
         "additionalProperties": false,
@@ -1471,9 +1478,127 @@
         "required": [
           "event",
           "score",
-          "reasons"
+          "reasons",
+          "factors",
+          "explanation"
         ],
         "title": "Recommendation"
+      },
+      "RecommendationFactors": {
+        "properties": {
+          "employee_grade": {
+            "type": "string",
+            "enum": [
+              "Junior",
+              "Middle",
+              "Senior",
+              "Lead"
+            ],
+            "title": "Employee Grade"
+          },
+          "target_grade": {
+            "type": "string",
+            "enum": [
+              "Junior",
+              "Middle",
+              "Senior",
+              "Lead"
+            ],
+            "title": "Target Grade"
+          },
+          "audience_grade_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Audience Grade Count"
+          },
+          "skill_impacts": {
+            "items": {
+              "$ref": "#/components/schemas/SkillImpact"
+            },
+            "type": "array",
+            "title": "Skill Impacts"
+          },
+          "total_deficit": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Total Deficit"
+          },
+          "covered_deficit": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Covered Deficit"
+          },
+          "weighted_total_deficit": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Weighted Total Deficit"
+          },
+          "weighted_covered_deficit": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Weighted Covered Deficit"
+          },
+          "similar_event_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\S+$"
+            },
+            "type": "array",
+            "title": "Similar Event Ids"
+          },
+          "no_show_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "No Show Count"
+          },
+          "declined_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Declined Count"
+          },
+          "deficit_score": {
+            "type": "number",
+            "title": "Deficit Score"
+          },
+          "importance_score": {
+            "type": "number",
+            "title": "Importance Score"
+          },
+          "grade_score": {
+            "type": "number",
+            "title": "Grade Score"
+          },
+          "history_penalty": {
+            "type": "number",
+            "title": "History Penalty"
+          },
+          "weights": {
+            "$ref": "#/components/schemas/ScoringWeights"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "employee_grade",
+          "target_grade",
+          "audience_grade_count",
+          "skill_impacts",
+          "total_deficit",
+          "covered_deficit",
+          "weighted_total_deficit",
+          "weighted_covered_deficit",
+          "similar_event_ids",
+          "no_show_count",
+          "declined_count",
+          "deficit_score",
+          "importance_score",
+          "grade_score",
+          "history_penalty",
+          "weights"
+        ],
+        "title": "RecommendationFactors"
       },
       "RecommendationsResponse": {
         "properties": {
@@ -1488,18 +1613,35 @@
             "type": "string",
             "enum": [
               "ready",
-              "not_implemented"
+              "no_suitable_event",
+              "requirements_met"
             ],
             "title": "Status"
           },
           "source": {
             "type": "string",
             "enum": [
-              "mock",
               "fallback",
               "llm"
             ],
             "title": "Source"
+          },
+          "next_grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Junior",
+                  "Middle",
+                  "Senior",
+                  "Lead"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Grade"
           },
           "recommendations": {
             "items": {
@@ -1522,10 +1664,48 @@
           "employee_id",
           "status",
           "source",
+          "next_grade",
           "recommendations",
           "gaps"
         ],
         "title": "RecommendationsResponse"
+      },
+      "ScoringWeights": {
+        "properties": {
+          "deficit": {
+            "type": "number",
+            "title": "Deficit",
+            "default": 100
+          },
+          "importance": {
+            "type": "number",
+            "title": "Importance",
+            "default": 30
+          },
+          "grade": {
+            "type": "number",
+            "title": "Grade",
+            "default": 5
+          },
+          "no_show": {
+            "type": "number",
+            "title": "No Show",
+            "default": 10
+          },
+          "declined": {
+            "type": "number",
+            "title": "Declined",
+            "default": 15
+          },
+          "history_penalty_cap": {
+            "type": "number",
+            "title": "History Penalty Cap",
+            "default": 30
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ScoringWeights"
       },
       "SkillGain": {
         "properties": {
@@ -1578,6 +1758,12 @@
             "maximum": 5.0,
             "minimum": 0.0,
             "title": "Required Level"
+          },
+          "deficit": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Deficit"
           }
         },
         "additionalProperties": false,
@@ -1585,9 +1771,95 @@
         "required": [
           "skill_id",
           "current_level",
-          "required_level"
+          "required_level",
+          "deficit"
         ],
         "title": "SkillGap"
+      },
+      "SkillImpact": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^\\S+$",
+            "title": "Skill Id"
+          },
+          "current_level": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Current Level"
+          },
+          "required_level": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Required Level"
+          },
+          "deficit": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Deficit"
+          },
+          "gain": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Gain"
+          },
+          "max_level": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Max Level"
+          },
+          "level_after": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Level After"
+          },
+          "effective_gain": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Effective Gain"
+          },
+          "covered_deficit": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Covered Deficit"
+          },
+          "critical": {
+            "type": "boolean",
+            "title": "Critical"
+          },
+          "importance": {
+            "type": "integer",
+            "maximum": 2.0,
+            "minimum": 1.0,
+            "title": "Importance"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "current_level",
+          "required_level",
+          "deficit",
+          "gain",
+          "max_level",
+          "level_after",
+          "effective_gain",
+          "covered_deficit",
+          "critical",
+          "importance"
+        ],
+        "title": "SkillImpact"
       },
       "ValidationError": {
         "properties": {

@@ -73,16 +73,16 @@ def test_missing_employee_and_event(client, employee_headers, hr_headers):
     )
 
 
-def test_recommendations_and_summary_are_explicit_stubs(client, employee_headers, hr_headers):
+def test_recommendations_and_summary_contract(client, employee_headers, hr_headers):
     response = client.get("/api/employees/SYN_E001/recommendations", headers=employee_headers)
     assert response.status_code == 200
-    assert response.json() == {
-        "employee_id": "SYN_E001",
-        "status": "not_implemented",
-        "source": "mock",
-        "recommendations": [],
-        "gaps": [],
-    }
+    body = response.json()
+    assert body["employee_id"] == "SYN_E001"
+    assert body["status"] == "ready"
+    assert body["source"] == "fallback"
+    assert body["next_grade"] == "Middle"
+    assert [r["event"]["event_id"] for r in body["recommendations"]] == ["SYN_EV001", "SYN_EV002"]
+    assert all(len(r["reasons"]) == 4 for r in body["recommendations"])
     response = client.get("/api/hr/summary", headers=hr_headers)
     assert response.status_code == 200
     assert response.json() == {
@@ -94,14 +94,18 @@ def test_recommendations_and_summary_are_explicit_stubs(client, employee_headers
     }
 
 
-def test_configured_key_does_not_claim_live_llm(settings, employee_headers):
+def test_configured_key_uses_fallback_on_failure(settings, employee_headers, monkeypatch):
+    async def unavailable(*args):
+        return None
+
+    monkeypatch.setattr("app.recommend.select_recommendations", unavailable)
     configured = Settings(
         data_dir=settings.data_dir, database_url=settings.database_url, llm_api_key="test-only"
     )
     with TestClient(create_app(configured)) as client:
         response = client.get("/api/employees/SYN_E001/recommendations", headers=employee_headers)
         assert response.json()["source"] == "fallback"
-        assert response.json()["status"] == "not_implemented"
+        assert response.json()["status"] == "ready"
 
 
 def test_write_stubs_do_not_mutate_state(client, employee_headers, hr_headers):

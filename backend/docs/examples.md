@@ -31,13 +31,20 @@ POST requests use `Content-Type: application/json`.
 
 ## GET /api/employees/SYN_E001/recommendations
 
-200 response with no `LLM_API_KEY`:
+With no `LLM_API_KEY`, the endpoint returns `source: fallback`, `status: ready`,
+`next_grade: Middle`, calculated gaps, and 2 recommendations for the initial
+SYN_E001 fixture: SYN_EV001 (score 22.240259), then SYN_EV002 (score 19.512987).
+Each recommendation contains `event`, `score`, `factors`, 4 factual `reasons`, and
+their combined `explanation`. See [the complete scoring contract](recommendations.md).
+
+For a Lead employee without a next-grade requirement, the response is:
 
 ```json
 {
-  "employee_id": "SYN_E001",
-  "status": "not_implemented",
-  "source": "mock",
+  "employee_id": "SYN_E005",
+  "status": "no_suitable_event",
+  "source": "fallback",
+  "next_grade": null,
   "recommendations": [],
   "gaps": []
 }

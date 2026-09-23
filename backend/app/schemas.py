@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 Identifier = Annotated[str, Field(min_length=1, max_length=128, pattern=r"^\S+$")]
 SkillLevel = Annotated[int, Field(strict=True, ge=0, le=5)]
 Grade = Literal["Junior", "Middle", "Senior", "Lead"]
-Source = Literal["mock", "fallback", "llm"]
+Source = Literal["fallback", "llm"]
 
 
 class Schema(BaseModel):
@@ -140,18 +140,60 @@ class SkillGap(Schema):
     skill_id: Identifier
     current_level: SkillLevel
     required_level: SkillLevel
+    deficit: SkillLevel
+
+
+class SkillImpact(SkillGap):
+    gain: SkillLevel
+    max_level: SkillLevel
+    level_after: SkillLevel
+    effective_gain: SkillLevel
+    covered_deficit: SkillLevel
+    critical: bool
+    importance: int = Field(ge=1, le=2)
+
+
+class ScoringWeights(Schema):
+    deficit: float = 100
+    importance: float = 30
+    grade: float = 5
+    no_show: float = 10
+    declined: float = 15
+    history_penalty_cap: float = 30
+
+
+class RecommendationFactors(Schema):
+    employee_grade: Grade
+    target_grade: Grade
+    audience_grade_count: int = Field(ge=1)
+    skill_impacts: list[SkillImpact]
+    total_deficit: int = Field(gt=0)
+    covered_deficit: int = Field(gt=0)
+    weighted_total_deficit: int = Field(gt=0)
+    weighted_covered_deficit: int = Field(gt=0)
+    similar_event_ids: list[Identifier]
+    no_show_count: int = Field(ge=0)
+    declined_count: int = Field(ge=0)
+    deficit_score: float
+    importance_score: float
+    grade_score: float
+    history_penalty: float
+    weights: ScoringWeights
 
 
 class Recommendation(Schema):
     event: Event
     score: float
     reasons: list[str]
+    factors: RecommendationFactors
+    explanation: str
 
 
 class RecommendationsResponse(Schema):
     employee_id: Identifier
-    status: Literal["ready", "not_implemented"]
+    status: Literal["ready", "no_suitable_event", "requirements_met"]
     source: Source
+    next_grade: Grade | None
     recommendations: list[Recommendation]
     gaps: list[SkillGap]
 

@@ -20,11 +20,15 @@ Configuration uses environment variables (see `.env.example`):
 | --- | --- | --- |
 | `DATA_DIR` | `backend/data/synthetic` (absolute) | Dataset directory |
 | `DATABASE_URL` | SQLite `backend/career_quest.db` (absolute) | Database location |
-| `LLM_API_KEY` | Unset | `source=mock`; when set, `source=fallback` in this scaffold |
+| `LLM_API_KEY` | Unset | Without a key: local scoring, `source=fallback` |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | OpenAI-compatible API base URL |
+| `LLM_MODEL` | `gpt-4o-mini` | Model used for candidate selection |
 
 Relative environment paths resolve against the working directory. `.env` is not
 loaded automatically; use `uv run --env-file .env uvicorn app.main:app` if needed.
-No LLM calls, ranking, gap calculation, skill growth or HR aggregation are implemented.
+Recommendations include next-grade gap calculation, fallback scoring and optional
+validated LLM selection. Completion, import and HR aggregation remain stubs in
+this checkout.
 
 ## Data and persistence
 
@@ -39,8 +43,8 @@ Event input accepts dataset fields `target_roles`, `target_grades`,
 
 The default fixtures are explicitly synthetic: 10 employees, 8 events, 15 skills,
 8 role/grade profiles and 12 history rows. Each record has `synthetic: true`.
-Missing employee skills remain absent in responses; interpreting them as level
-zero belongs to the future business logic.
+Missing employee skills remain absent in profiles and count as zero in gap and
+recommendation calculations.
 
 SQLAlchemy creates employees, employee_skills, skills, grade_requirements, events,
 activity_history and completions tables. Foreign keys are enabled. Completions
@@ -65,19 +69,21 @@ layer must supply them before external deployment.
 | Method | Path | Access | Current behavior |
 | --- | --- | --- | --- |
 | GET | `/api/employees/{id}` | Self / HR | 200, Employee from SQLite |
-| GET | `/api/employees/{id}/recommendations` | Self / HR | 200, explicit stub, empty lists |
+| GET | `/api/employees/{id}/recommendations` | Self / HR | 200, scored recommendations or explicit empty state |
 | POST | `/api/employees/{id}/complete` | Self / HR | 501, explicit stub, no writes |
 | POST | `/api/import` | HR | 501, validates employees + history, no writes |
 | GET | `/api/hr/summary` | HR | 200, explicit stub, null metrics |
 | GET | `/api/employees` | HR | 200, `{employees, total}` from SQLite |
 
-Stubs return `status: not_implemented`. A configured key does not mean an LLM was
-called: `source: fallback` is reserved for the future local scorer and results
-remain empty. Missing headers return 401, forbidden access 403, missing records
+Stubs return `status: not_implemented`. Recommendations return `source: fallback`
+unless a valid LLM selection is used (`source: llm`). Missing headers return 401,
+forbidden access 403, missing records
 404, and schema/header validation errors 422. Validation errors use FastAPI's
 standard `HTTPValidationError`; other errors use `{detail: string}`.
 
 See [JSON examples](docs/examples.md) and [exported OpenAPI](docs/openapi.json).
+See [recommendation scoring and LLM contract](docs/recommendations.md) for all
+weights, eligibility rules, response states and explanation validation.
 
 ## Verification and OpenAPI export
 
@@ -90,5 +96,6 @@ uv run ruff format --check app scripts tests
 
 OpenAPI export does not start the app, read the dataset, or create a database.
 Tests use temporary databases and check authorization, validation, CORS,
-startup seeding, rollback, completion uniqueness, stub immutability, and that the
-exported contract matches the runtime schema.
+startup seeding, rollback, completion uniqueness, stub immutability, recommendation
+ranking traps, LLM failure/timeout handling, and OpenAPI consistency. LLM tests use
+mock HTTP transports and do not send dataset records to external services.
