@@ -1,0 +1,6 @@
+# Reproducible generated fixture; formatting creates an unnecessarily large diff.
+src/lib/dataset.json
+.next
+node_modules
+playwright-report
+test-results
