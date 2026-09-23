@@ -64,13 +64,10 @@ export function OpeningExperience({ children }: { children: ReactNode }) {
         <section
           className="opening"
           ref={opening}
-          aria-label={t("Добро пожаловать в Career Quest")}
+          aria-label={t("Добро пожаловать в ÖSU")}
         >
           <div className="opening-top">
-            <span className="opening-wordmark">
-              career<span>quest</span>
-              <sup>✳</sup>
-            </span>
+            <span className="opening-wordmark">ÖSU</span>
             <span className="opening-edition">
               Halyk Bank · {t("Пространство развития")}
             </span>
