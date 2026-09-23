@@ -1,4 +1,5 @@
 "use client";
+import { OpeningExperience } from "@/components/opening-experience";
 import { useCareer } from "@/features/career/career-context";
 import { today } from "@/lib/career";
 import { Icon } from "@/components/ui/primitives";
@@ -128,7 +129,7 @@ function CareerContent() {
             <span className="avatar small">{employee.full_name[0]}</span>
           </div>
         </header>
-        <main>
+        <main tabIndex={-1}>
           <div className="profile-switch">
             <label htmlFor="demo-role">{t("Демо-роль")}</label>
             <select
@@ -178,53 +179,60 @@ function CareerContent() {
               </button>
             </div>
           )}
-          <div className="page-heading">
-            <div>
-              <div className="eyebrow green">
-                {tab === 0
-                  ? t("ВАШ СЛЕДУЮЩИЙ ШАГ НАЧИНАЕТСЯ ЗДЕСЬ")
-                  : t("CAREER QUEST / РАЗВИТИЕ")}
+          <div className="screen-content" key={tab}>
+            <div className="page-heading">
+              <div>
+                <div className="eyebrow green">
+                  {tab === 0
+                    ? t("ВАШ СЛЕДУЮЩИЙ ШАГ НАЧИНАЕТСЯ ЗДЕСЬ")
+                    : t("CAREER QUEST / РАЗВИТИЕ")}
+                </div>
+                <h1>
+                  {tab === 0
+                    ? t("Рады видеть вас, {0}", [
+                        employee.full_name.split(" ")[0],
+                      ])
+                    : tabs[tab]}
+                  {tab === 0 && <span className="greeting-dot">.</span>}
+                </h1>
+                <p>
+                  {
+                    [
+                      t(
+                        "Развивайте сильные стороны. Открывайте новые возможности.",
+                      ),
+                      t(
+                        "Понятная цель и навыки, которые помогут к ней прийти.",
+                      ),
+                      t("Найдите подходящий формат для следующего шага."),
+                      t("Ваш опыт, маленькие победы и движение вперёд."),
+                      t(
+                        "Общий взгляд на развитие команды — без рейтингов сотрудников.",
+                      ),
+                      t(
+                        "Добавьте проверочные профили и историю в формате стартового датасета.",
+                      ),
+                    ][tab]
+                  }
+                </p>
               </div>
-              <h1>
-                {tab === 0
-                  ? t("Рады видеть вас, {0}", [
-                      employee.full_name.split(" ")[0],
-                    ])
-                  : tabs[tab]}
-                {tab === 0 && <span className="greeting-dot">.</span>}
-              </h1>
-              <p>
-                {
-                  [
-                    t(
-                      "Развивайте сильные стороны. Открывайте новые возможности.",
-                    ),
-                    t("Понятная цель и навыки, которые помогут к ней прийти."),
-                    t("Найдите подходящий формат для следующего шага."),
-                    t("Ваш опыт, маленькие победы и движение вперёд."),
-                    t(
-                      "Общий взгляд на развитие команды — без рейтингов сотрудников.",
-                    ),
-                    t(
-                      "Добавьте проверочные профили и историю в формате стартового датасета.",
-                    ),
-                  ][tab]
-                }
-              </p>
+              {tab === 0 && (
+                <button
+                  className="button secondary"
+                  onClick={() => navigate(1)}
+                >
+                  {t("Моя траектория")}
+                  <span>↗</span>
+                </button>
+              )}
             </div>
-            {tab === 0 && (
-              <button className="button secondary" onClick={() => navigate(1)}>
-                {t("Моя траектория")}
-                <span>↗</span>
-              </button>
-            )}
+            {tab === 0 && <OverviewScreen />}
+            {tab === 1 && <TrajectoryScreen />}
+            {tab === 2 && <CatalogScreen />}
+            {tab === 3 && <HistoryScreen />}
+            {tab === 4 && demoRole === "hr" && <HrScreen />}
+            {tab === 5 && demoRole === "hr" && <ImportScreen />}
           </div>
-          {tab === 0 && <OverviewScreen />}
-          {tab === 1 && <TrajectoryScreen />}
-          {tab === 2 && <CatalogScreen />}
-          {tab === 3 && <HistoryScreen />}
-          {tab === 4 && demoRole === "hr" && <HrScreen />}
-          {tab === 5 && demoRole === "hr" && <ImportScreen />}
           <footer>
             <span>
               careerquest <span className="footer-dot">·</span>{" "}
@@ -242,7 +250,9 @@ export default function CareerApp() {
   return (
     <LocaleProvider>
       <CareerProvider>
-        <CareerContent />
+        <OpeningExperience>
+          <CareerContent />
+        </OpeningExperience>
       </CareerProvider>
     </LocaleProvider>
   );
