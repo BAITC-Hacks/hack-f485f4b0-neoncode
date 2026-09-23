@@ -140,6 +140,20 @@ class SkillGap(Schema):
     skill_id: Identifier
     current_level: SkillLevel
     required_level: SkillLevel
+    deficit: SkillLevel
+
+
+class GradeProgress(Schema):
+    status: Literal["needs_development", "requirements_met", "no_next_grade"]
+    next_grade: Grade | None
+    requirements: GradeRequirement | None
+    gaps: list[SkillGap]
+    remaining_points: int = Field(ge=0, description="Sum of skill deficits for the next grade")
+
+
+class EmployeeProfile(Employee):
+    progress: GradeProgress
+    history: list[ActivityHistory]
 
 
 class Recommendation(Schema):
@@ -165,8 +179,10 @@ class CompletionResponse(Schema):
     employee_id: Identifier
     event_id: Identifier
     completion_id: Identifier
-    status: Literal["completed", "already_completed", "not_implemented"]
-    skills: dict[Identifier, SkillLevel]
+    status: Literal["completed"]
+    skills_before: dict[Identifier, SkillLevel]
+    skills_after: dict[Identifier, SkillLevel]
+    progress_after: GradeProgress
 
 
 class ImportRequest(Schema):

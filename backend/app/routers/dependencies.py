@@ -44,14 +44,24 @@ def get_session(request: Request) -> Iterator[Session]:
 SessionDependency = Annotated[Session, Depends(get_session)]
 
 
-def accessible_employee(
+def accessible_employee_id(
     id: str,
-    session: SessionDependency,
     identity: Annotated[Identity, Depends(get_identity)],
-) -> models.Employee:
+) -> str:
     if identity.role != "hr" and identity.employee_id != id:
         raise HTTPException(status_code=403, detail="Employees may only access their own profile")
-    employee = session.get(models.Employee, id)
+    return id
+
+
+EmployeeIdDependency = Annotated[str, Depends(accessible_employee_id)]
+IdentityDependency = Annotated[Identity, Depends(get_identity)]
+
+
+def accessible_employee(
+    employee_id: EmployeeIdDependency,
+    session: SessionDependency,
+) -> models.Employee:
+    employee = session.get(models.Employee, employee_id)
     if employee is None:
         raise HTTPException(status_code=404, detail="Employee not found")
     return employee

@@ -1,0 +1,15 @@
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.git
+.env
+career_quest.db
+career-quest-backend
+tests
+docs
+scripts
+README.md
+AGENTS.md

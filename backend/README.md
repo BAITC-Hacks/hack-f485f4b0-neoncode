@@ -25,7 +25,8 @@ Configuration uses environment variables (see `.env.example`):
 
 Relative environment paths resolve against the working directory. `.env` is not
 loaded automatically; use `uv run --env-file .env uvicorn app.main:app` if needed.
-No LLM calls, ranking, gap calculation, skill growth or HR aggregation are implemented.
+Next-grade gaps and event completion are implemented. LLM calls, ranking, import
+and HR aggregation remain stubs.
 
 ## Data and persistence
 
@@ -40,14 +41,15 @@ Event input accepts dataset fields `target_roles`, `target_grades`,
 
 The default fixtures are explicitly synthetic: 10 employees, 8 events, 15 skills,
 8 role/grade profiles and 12 history rows. Each record has `synthetic: true`.
-Missing employee skills remain absent in responses; interpreting them as level
-zero belongs to the future business logic.
+Missing employee skills remain absent in profiles and count as level zero when
+calculating gaps or applying event gains.
 
 SQLAlchemy creates employees, employee_skills, skills, grade_requirements, events,
 activity_history and completions tables. Foreign keys are enabled. Completions
-have the unique key `(employee_id, event_id, completion_id)` and a reserved response
-column for future replay support. The completion endpoint does not yet write or
-replay completions.
+have the unique key `(employee_id, event_id, completion_id)` and store the response
+for exact replay. Completion applies skill changes, appends a completed history
+record and saves the response in one transaction. SQLite `BEGIN IMMEDIATE` locks
+before any reads so concurrent completions cannot double-apply or lose progress.
 
 Loading validates schemas, duplicate IDs and references before writing. The seed
 transaction only inserts missing IDs; repeated startup preserves existing data
@@ -65,9 +67,9 @@ layer must supply them before external deployment.
 
 | Method | Path | Access | Current behavior |
 | --- | --- | --- | --- |
-| GET | `/api/employees/{id}` | Self / HR | 200, Employee from SQLite |
+| GET | `/api/employees/{id}` | Self / HR | 200, profile, progress and history |
 | GET | `/api/employees/{id}/recommendations` | Self / HR | 200, explicit stub, empty lists |
-| POST | `/api/employees/{id}/complete` | Self / HR | 501, explicit stub, no writes |
+| POST | `/api/employees/{id}/complete` | Self / HR | 200, skill growth or saved response |
 | POST | `/api/import` | HR | 501, validates employees + history, no writes |
 | GET | `/api/hr/summary` | HR | 200, explicit stub, null metrics |
 | GET | `/api/employees` | HR | 200, `{employees, total}` from SQLite |
@@ -77,6 +79,45 @@ called: `source: fallback` is reserved for the future local scorer and results
 remain empty. Missing headers return 401, forbidden access 403, missing records
 404, and schema/header validation errors 422. Validation errors use FastAPI's
 standard `HTTPValidationError`; other errors use `{detail: string}`.
+
+### Grade progress
+
+`GET /api/employees/{id}` extends the dataset Employee with `progress` and `history`.
+The HR employee list and import Employee schema keep the dataset shape.
+History is ordered by descending date, then record ID, and contains only this employee.
+
+`progress.next_grade` is the nearest higher grade defined for the employee's role,
+using `Junior`, `Middle`, `Senior`, `Lead` order. `requirements` contains its role
+profile. `gaps` contains every required skill, including zero deficits, sorted by
+descending `deficit`, then skill ID. Each deficit is `max(0, required - current)`.
+`remaining_points` is their sum, not a number of events or months until promotion.
+
+- `needs_development`: at least one requirement has a positive deficit.
+- `requirements_met`: the next grade exists and all requirements are satisfied.
+- `no_next_grade`: no higher grade is defined for this role; next grade and
+  requirements are null, gaps are empty and remaining points are zero.
+
+### Completion
+
+Send `{"event_id": "SYN_EV001", "completion_id": "request-001"}`. The event must
+exist and both the employee role and current grade must be in its audience.
+An empty audience list matches nobody. An audience mismatch returns 400.
+Eligibility here checks audience only, not prerequisites or scheduled dates.
+For each event skill, growth is:
+
+```text
+new = min(5, max(current, min(current + gain, max_level)))
+```
+
+The 200 response contains `skills_before`, `skills_after`, and `progress_after`
+with next-grade requirements, deficits and remaining points. Grade never changes
+automatically, including when all requirements are met.
+
+Reusing the same employee/event/completion key returns the original response,
+including its original snapshots and `status: completed`, even after subsequent
+progress. It adds no history and applies no gains. A new completion ID represents
+a new completion; event repeat restrictions are not part of this endpoint yet.
+A legacy completion without a saved response returns 409 without applying gains.
 
 See [JSON examples](docs/examples.md) and [exported OpenAPI](docs/openapi.json).
 
@@ -91,5 +132,5 @@ uv run ruff format --check app scripts tests
 
 OpenAPI export does not start the app, read the dataset, or create a database.
 Tests use temporary databases and check authorization, validation, CORS,
-startup seeding, rollback, completion uniqueness, stub immutability, and that the
-exported contract matches the runtime schema.
+startup seeding, rollback, completion uniqueness and replay, concurrent completions,
+gain caps, grade progress, import stub immutability, and OpenAPI consistency.
