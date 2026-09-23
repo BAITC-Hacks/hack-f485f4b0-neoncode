@@ -212,7 +212,6 @@ export function OverviewScreen() {
             <br />
             {t("Ваше развитие остаётся вашим выбором.")}
           </p>
-          <span className="quote-spark">✳</span>
         </article>
       </section>
     </>

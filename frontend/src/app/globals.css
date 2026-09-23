@@ -110,9 +110,6 @@ p {
   font-weight: 650;
   padding: 0 8px;
 }
-.brand-light {
-  font-weight: 400;
-}
 .brand small {
   display: block;
   font-size: 7px;
@@ -130,13 +127,9 @@ p {
   box-shadow: 0 5px 12px #00845a22;
   width: 40px;
   height: 40px;
-  letter-spacing: -5px;
-  padding-right: 4px;
+  letter-spacing: 0;
   font-size: 28px;
   font-weight: 400;
-}
-.brand-mark span {
-  color: #d4dfbc;
 }
 .workspace {
   border: 1px solid var(--line);
@@ -215,12 +208,6 @@ p {
 .sidebar-note {
   margin: auto 8px 28px;
   padding-top: 36px;
-}
-.sidebar-note .leaf {
-  font-size: 35px;
-  color: #94aa80;
-  display: block;
-  margin-bottom: 14px;
 }
 .sidebar-note strong {
   font-size: 14px;
@@ -818,13 +805,6 @@ input {
   font-size: 10px;
   color: #66785f;
   line-height: 1.9;
-}
-.quote-spark {
-  position: absolute;
-  right: 25px;
-  bottom: 15px;
-  font-size: 70px;
-  color: #d4d4be;
 }
 .spaced {
   margin-top: 24px;
@@ -1728,15 +1708,6 @@ dialog .button {
   font-weight: 600;
   letter-spacing: -1.4px;
 }
-.opening-wordmark > span {
-  font-weight: 400;
-}
-.opening-wordmark sup {
-  color: #e5cb78;
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 24px;
-}
 .opening-edition,
 .opening-kicker,
 .opening-caption {
@@ -1889,16 +1860,8 @@ dialog .button {
   border-radius: 16px 4px 16px 16px;
   border: 1px solid #dce6d4;
 }
-.quote-spark {
-  transform: rotate(-12deg);
-  color: #b9c49a;
-}
 .section-title h2 {
   letter-spacing: -0.8px;
-}
-.sidebar-note .leaf {
-  transform: rotate(-12deg);
-  color: #b59d57;
 }
 @media (max-width: 600px) {
   .opening {

@@ -83,7 +83,7 @@ for (const locale of locales) {
       .getByRole("button", { name: names[locale], exact: true })
       .click();
     await expect(page.locator("html")).toHaveAttribute("lang", locale);
-    await expect(page).toHaveTitle(t("Career Quest — ваше развитие"));
+    await expect(page).toHaveTitle(t("ÖSU — ваше развитие"));
     await expect(
       page.getByRole("button", { name: names[locale], exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
