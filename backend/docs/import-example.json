@@ -1,0 +1,33 @@
+{
+  "meta": {"dataset": "Career Quest synthetic import example", "synthetic": true},
+  "employees": [
+    {
+      "employee_id": "SYN_DEMO_001",
+      "full_name": "Synthetic Import Employee 01",
+      "role": "Backend Engineer",
+      "grade": "Junior",
+      "tenure_months": 1,
+      "skills": {"SK_PYTHON": 1, "SK_SQL": 1},
+      "synthetic": true
+    },
+    {
+      "employee_id": "SYN_DEMO_002",
+      "full_name": "Synthetic Import Employee 02",
+      "role": "Backend Engineer",
+      "grade": "Junior",
+      "tenure_months": 2,
+      "skills": {"SK_PYTHON": 0, "SK_SQL": 1},
+      "synthetic": true
+    },
+    {
+      "employee_id": "SYN_DEMO_003",
+      "full_name": "Synthetic Import Employee 03",
+      "role": "Data Analyst",
+      "grade": "Junior",
+      "tenure_months": 3,
+      "skills": {"SK_PYTHON": 1, "SK_SQL": 0},
+      "synthetic": true
+    }
+  ],
+  "history": []
+}

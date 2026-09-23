@@ -84,13 +84,20 @@ The same response also contains:
 
 ## GET /api/employees/SYN_E001/recommendations
 
-200 response with no `LLM_API_KEY`:
+With no `LLM_API_KEY`, the endpoint returns `source: fallback`, `status: ready`,
+`next_grade: Middle`, calculated gaps, and 2 recommendations for the initial
+SYN_E001 fixture: SYN_EV001 (score 22.240259), then SYN_EV002 (score 19.512987).
+Each recommendation contains `event`, `score`, `factors`, 4 factual `reasons`, and
+their combined `explanation`. See [the complete scoring contract](recommendations.md).
+
+For a Lead employee without a next-grade requirement, the response is:
 
 ```json
 {
-  "employee_id": "SYN_E001",
-  "status": "not_implemented",
-  "source": "mock",
+  "employee_id": "SYN_E005",
+  "status": "no_suitable_event",
+  "source": "fallback",
+  "next_grade": null,
   "recommendations": [],
   "gaps": []
 }
@@ -172,37 +179,43 @@ JSON objects using the activity history CSV column names:
 }
 ```
 
-501 response (nothing is imported):
+200 response for a first import:
 
 ```json
 {
-  "status": "not_implemented",
+  "status": "imported",
   "employees_received": 1,
   "history_received": 1,
-  "employees_imported": 0,
-  "history_imported": 0
+  "employees_imported": 1,
+  "history_imported": 1,
+  "employees_created": 1,
+  "employees_updated": 0,
+  "history_created": 1,
+  "history_updated": 0
 }
 ```
 
 ## GET /api/hr/summary
 
-HR-only 200 response:
+HR-only 200 response excerpt for the original fixtures (the full response also
+contains `employees_by_grade`, `current_grade_skill_gaps`, `next_grade_skill_gaps`,
+`employees_without_step` and `participation_by_event`):
 
 ```json
 {
-  "status": "not_implemented",
-  "total_employees": null,
-  "total_events": null,
-  "completed_activities": null,
-  "employees_by_grade": null
+  "status": "ready",
+  "total_employees": 10,
+  "total_events": 8,
+  "completed_activities": 6
 }
 ```
 
 ## GET /api/employees
 
 HR-only 200 response: `{"employees": [Employee, ...], "total": 10}` for the
-default fixtures. Each item uses the dataset Employee shape shown above, without
-the detail endpoint's `progress` and `history` fields.
+default fixtures. Each item extends the Employee shape with `recommendation_status`
+(`ready`, `requirements_met`, `no_suitable_event`) and `next_grade` (or null).
+Employees are sorted by ID, not performance. See [HR and import guide](hr.md).
 
 ## Event and skill contracts
 
