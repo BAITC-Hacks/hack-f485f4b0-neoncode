@@ -1,4 +1,5 @@
 "use client";
+import { LocaleProvider, useLocale } from "@/lib/locale-context";
 import { useEffect, useRef, useState } from "react";
 import {
   data,
@@ -7,7 +8,7 @@ import {
   parseHistory,
   progress,
   recommendations,
-  skillName,
+  skillName as originalSkillName,
   target,
   today,
   validateEmployees,
@@ -15,36 +16,6 @@ import {
   type Event,
   type History,
 } from "@/lib/career";
-const tabs = [
-  "Обзор",
-  "Моя траектория",
-  "Каталог активностей",
-  "История развития",
-  "HR-аналитика",
-  "Импорт данных",
-];
-const typeNames: Record<string, string> = {
-  course: "Курс",
-  workshop: "Воркшоп",
-  mentoring: "Менторство",
-  certification: "Сертификация",
-  meetup: "Встреча",
-  compliance: "Обязательное обучение",
-  onboarding: "Онбординг",
-};
-const statusNames: Record<string, string> = {
-  completed: "Завершено",
-  in_progress: "В процессе",
-  dropped: "Прервано",
-  no_show: "Пропущено",
-  declined: "Отказ",
-  overdue: "Просрочено",
-};
-const formatNames: Record<string, string> = {
-  online: "Онлайн",
-  offline: "Очно",
-  self_paced: "В своём темпе",
-};
 function Icon({ name, size = 20 }: { name: number; size?: number }) {
   const paths = [
     "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
@@ -71,11 +42,12 @@ function Icon({ name, size = 20 }: { name: number; size?: number }) {
   );
 }
 function Meter({ value }: { value: number }) {
+  const { t } = useLocale();
   return (
     <div
       className="meter"
       role="progressbar"
-      aria-label="Соответствие требованиям"
+      aria-label={t("Соответствие требованиям")}
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={100}
@@ -84,7 +56,40 @@ function Meter({ value }: { value: number }) {
     </div>
   );
 }
-export default function CareerApp() {
+function CareerContent() {
+  const { t, locale, setLocale, date } = useLocale();
+  const skillName = (id: string) => t(originalSkillName(id));
+  const tabs = [
+    t("Обзор"),
+    t("Моя траектория"),
+    t("Каталог активностей"),
+    t("История развития"),
+    t("HR-аналитика"),
+    t("Импорт данных"),
+  ];
+  const typeNames: Record<string, string> = {
+    course: t("Курс"),
+    workshop: t("Воркшоп"),
+    mentoring: t("Менторство"),
+    certification: t("Сертификация"),
+    meetup: t("Встреча"),
+    compliance: t("Обязательное обучение"),
+    onboarding: t("Онбординг"),
+  };
+  const statusNames: Record<string, string> = {
+    completed: t("Завершено"),
+    in_progress: t("В процессе"),
+    dropped: t("Прервано"),
+    no_show: t("Пропущено"),
+    declined: t("Отказ"),
+    overdue: t("Просрочено"),
+  };
+  const formatNames: Record<string, string> = {
+    online: t("Онлайн"),
+    offline: t("Очно"),
+    self_paced: t("В своём темпе"),
+  };
+
   const [employees, setEmployees] = useState<Employee[]>(data.employees);
   const [history, setHistory] = useState<History[]>(data.history);
   const [employeeId, setEmployeeId] = useState("E0005");
@@ -235,7 +240,13 @@ export default function CareerApp() {
         "Данные импортированы. Профили, аналитика и рекомендации обновлены.",
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось прочитать файлы.");
+      setError(
+        e instanceof SyntaxError
+          ? "Некорректный JSON. Проверьте формат файла."
+          : e instanceof Error
+            ? e.message
+            : "Не удалось прочитать файлы.",
+      );
     }
   }
   function eventCard(
@@ -258,27 +269,33 @@ export default function CareerApp() {
         </div>
         <div className="event-body">
           <div className="eyebrow">
-            {formatNames[event.format]} <span>·</span> {event.duration_hours} ч.
+            {formatNames[event.format]} <span>·</span> {event.duration_hours}{" "}
+            {t("ч.")}
           </div>
-          <h3>{event.title}</h3>
+          <h3>{t(event.title)}</h3>
           <p>
             {reason
-              ? `${skillName(reason.gains[0].id)}: ${reason.gains[0].current} → ${Math.min(reason.gains[0].current + reason.gains[0].gain, 5)}. Цель — ${reason.gains[0].required}.`
-              : event.description}
+              ? t("{0}: {1} → {2}. Цель — {3}.", [
+                  skillName(reason.gains[0].id),
+                  reason.gains[0].current,
+                  Math.min(reason.gains[0].current + reason.gains[0].gain, 5),
+                  reason.gains[0].required,
+                ])
+              : t(event.description)}
           </p>
           {reason && (
             <span className="pill">
               {reason.gains.some((g) => g.critical)
-                ? "Для ключевого навыка"
-                : "Ближе к вашей цели"}
+                ? t("Для ключевого навыка")
+                : t("Ближе к вашей цели")}
             </span>
           )}
           <button className="card-link" onClick={() => setSelected(event)}>
             {started
-              ? "В вашем плане"
+              ? t("В вашем плане")
               : done
-                ? "Пройдено · подробнее"
-                : "Подробнее"}{" "}
+                ? t("Пройдено · подробнее")
+                : t("Подробнее")}{" "}
             <span>↗</span>
           </button>
         </div>
@@ -288,10 +305,12 @@ export default function CareerApp() {
   const catalog = data.events.filter(
     (e) =>
       (filter === "all" || e.type === filter) &&
-      `${e.title} ${e.description}`.toLowerCase().includes(query.toLowerCase()),
+      `${t(e.title)} ${t(e.description)} ${e.title} ${e.description}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
   );
   const hrEmployees = employees.filter((e) =>
-    `${e.full_name} ${e.department}`
+    `${e.full_name} ${t(e.department)}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
@@ -299,9 +318,9 @@ export default function CareerApp() {
     .map((s) => ({
       ...s,
       count: employees.filter((e) => {
-        const req = (target(e).required_skills as Partial<Record<string, number>>)[
-          s.skill_id
-        ];
+        const req = (
+          target(e).required_skills as Partial<Record<string, number>>
+        )[s.skill_id];
         return req && (levels(e, history)[s.skill_id] ?? 0) < req;
       }).length,
     }))
@@ -316,18 +335,18 @@ export default function CareerApp() {
           </span>
           <span>
             career<span className="brand-light">quest</span>
-            <small>ПРОСТРАНСТВО РАЗВИТИЯ</small>
+            <small>{t("ПРОСТРАНСТВО РАЗВИТИЯ")}</small>
           </span>
         </a>
         <div className="workspace">
           <span className="workspace-icon">H</span>
           <div>
-            Halyk Bank<small>Корпоративное пространство</small>
+            Halyk Bank<small>{t("Корпоративное пространство")}</small>
           </div>
           <span className="online-dot" />
         </div>
-        <div className="nav-label">ЛИЧНОЕ ПРОСТРАНСТВО</div>
-        <nav aria-label="Главная навигация">
+        <div className="nav-label">{t("ЛИЧНОЕ ПРОСТРАНСТВО")}</div>
+        <nav aria-label={t("Главная навигация")}>
           {tabs.map((name, i) => (
             <button
               key={name}
@@ -344,10 +363,11 @@ export default function CareerApp() {
         <div className="sidebar-note">
           <span className="leaf">✳</span>
           <strong>
-            В своём темпе.
-            <br />В своём направлении.
+            {t("В своём темпе.")}
+            <br />
+            {t("В своём направлении.")}
           </strong>
-          <p>Каждый небольшой шаг — часть большого пути.</p>
+          <p>{t("Каждый небольшой шаг — часть большого пути.")}</p>
         </div>
         <div className="sidebar-bottom">
           <span className="avatar">
@@ -360,7 +380,7 @@ export default function CareerApp() {
           <div>
             <strong>{employee.full_name}</strong>
             <small>
-              {employee.grade} · {employee.role}
+              {t(employee.grade)} · {t(employee.role)}
             </small>
           </div>
         </div>
@@ -368,19 +388,43 @@ export default function CareerApp() {
       <div className="main-shell">
         <header className="topbar">
           <div>
-            <span className="breadcrumb">Моё развитие</span>
+            <span className="breadcrumb">{t("Моё развитие")}</span>
             <span className="slash">/</span>
             {tabs[tab]}
           </div>
           <div className="topbar-right">
-            <span className="demo-tag">Демо-пространство</span>
-            <span className="date-label">1 октября 2026</span>
+            <div
+              className="language-switch"
+              role="group"
+              aria-label={t("Язык интерфейса")}
+            >
+              {(
+                [
+                  { code: "ru", label: "РУС", name: "Русский" },
+                  { code: "en", label: "ENG", name: "English" },
+                  { code: "kk", label: "ҚАЗ", name: "Қазақша" },
+                ] as const
+              ).map((language) => (
+                <button
+                  key={language.code}
+                  type="button"
+                  lang={language.code}
+                  aria-label={language.name}
+                  aria-pressed={locale === language.code}
+                  onClick={() => setLocale(language.code)}
+                >
+                  {language.label}
+                </button>
+              ))}
+            </div>
+            <span className="demo-tag">{t("Демо-пространство")}</span>
+            <span className="date-label">{date(today)}</span>
             <span className="avatar small">{employee.full_name[0]}</span>
           </div>
         </header>
         <main>
           <div className="profile-switch">
-            <label htmlFor="profile">Демо-профиль</label>
+            <label htmlFor="profile">{t("Демо-профиль")}</label>
             <select
               id="profile"
               value={employee.employee_id}
@@ -391,16 +435,16 @@ export default function CareerApp() {
             >
               {employees.map((e) => (
                 <option value={e.employee_id} key={e.employee_id}>
-                  {e.full_name} · {e.grade}
+                  {e.full_name} · {t(e.grade)}
                 </option>
               ))}
             </select>
           </div>
           {notice && (
             <div role="status" className="notice">
-              {notice}
+              {t(notice)}
               <button
-                aria-label="Закрыть уведомление"
+                aria-label={t("Закрыть уведомление")}
                 onClick={() => setNotice("")}
               >
                 ×
@@ -411,31 +455,40 @@ export default function CareerApp() {
             <div>
               <div className="eyebrow green">
                 {tab === 0
-                  ? "ВАШ СЛЕДУЮЩИЙ ШАГ НАЧИНАЕТСЯ ЗДЕСЬ"
-                  : "CAREER QUEST / РАЗВИТИЕ"}
+                  ? t("ВАШ СЛЕДУЮЩИЙ ШАГ НАЧИНАЕТСЯ ЗДЕСЬ")
+                  : t("CAREER QUEST / РАЗВИТИЕ")}
               </div>
               <h1>
                 {tab === 0
-                  ? `Рады видеть вас, ${employee.full_name.split(" ")[0]}`
+                  ? t("Рады видеть вас, {0}", [
+                      employee.full_name.split(" ")[0],
+                    ])
                   : tabs[tab]}
                 {tab === 0 && <span className="greeting-dot">.</span>}
               </h1>
               <p>
                 {
                   [
-                    "Развивайте сильные стороны. Открывайте новые возможности.",
-                    "Понятная цель и навыки, которые помогут к ней прийти.",
-                    "Найдите подходящий формат для следующего шага.",
-                    "Ваш опыт, маленькие победы и движение вперёд.",
-                    "Общий взгляд на развитие команды — без рейтингов сотрудников.",
-                    "Добавьте проверочные профили и историю в формате стартового датасета.",
+                    t(
+                      "Развивайте сильные стороны. Открывайте новые возможности.",
+                    ),
+                    t("Понятная цель и навыки, которые помогут к ней прийти."),
+                    t("Найдите подходящий формат для следующего шага."),
+                    t("Ваш опыт, маленькие победы и движение вперёд."),
+                    t(
+                      "Общий взгляд на развитие команды — без рейтингов сотрудников.",
+                    ),
+                    t(
+                      "Добавьте проверочные профили и историю в формате стартового датасета.",
+                    ),
                   ][tab]
                 }
               </p>
             </div>
             {tab === 0 && (
               <button className="button secondary" onClick={() => navigate(1)}>
-                Моя траектория <span>↗</span>
+                {t("Моя траектория")}
+                <span>↗</span>
               </button>
             )}
           </div>
@@ -444,21 +497,25 @@ export default function CareerApp() {
               <section className="overview-grid">
                 <article className="journey-card">
                   <div>
-                    <span className="pill light">ВАША КАРЬЕРНАЯ ЦЕЛЬ</span>
+                    <span className="pill light">
+                      {t("ВАША КАРЬЕРНАЯ ЦЕЛЬ")}
+                    </span>
                     <h2>
-                      Следующая остановка —<br />
-                      {goal.grade} {goal.role}
+                      {t("Следующая остановка —")}
+                      <br />
+                      {t(goal.grade)} · {t(goal.role)}
                     </h2>
                     <p>
-                      Не просто новый грейд.
+                      {t("Не просто новый грейд.")}
                       <br />
-                      Больше уверенности, масштаба и возможностей.
+                      {t("Больше уверенности, масштаба и возможностей.")}
                     </p>
                     <button
                       className="journey-link"
                       onClick={() => navigate(1)}
                     >
-                      Посмотреть путь <span>→</span>
+                      {t("Посмотреть путь")}
+                      <span>→</span>
                     </button>
                   </div>
                   <div className="journey-illustration" aria-hidden="true">
@@ -469,13 +526,13 @@ export default function CareerApp() {
                     <div className="step step-three" />
                     <div className="flag">✦</div>
                     <span className="illustration-label">
-                      ВЫ НА ВЕРНОМ ПУТИ
+                      {t("ВЫ НА ВЕРНОМ ПУТИ")}
                     </span>
                   </div>
                 </article>
                 <article className="progress-card">
                   <div className="section-top">
-                    <h3>Готовность к цели</h3>
+                    <h3>{t("Готовность к цели")}</h3>
                     <Icon name={1} />
                   </div>
                   <div
@@ -489,18 +546,18 @@ export default function CareerApp() {
                         {percent}
                         <small>%</small>
                       </strong>
-                      <span>навыков для цели</span>
+                      <span>{t("навыков для цели")}</span>
                     </div>
                   </div>
                   <p>
-                    {
+                    {t("{0} из {1} навыков на нужном уровне", [
                       requirements.filter(([id, n]) => (current[id] ?? 0) >= n)
-                        .length
-                    }{" "}
-                    из {requirements.length} навыков на нужном уровне
+                        .length,
+                      requirements.length,
+                    ])}
                   </p>
                   <span className="subtle">
-                    Рассчитано по требованиям грейда
+                    {t("Рассчитано по требованиям грейда")}
                   </span>
                 </article>
               </section>
@@ -511,7 +568,7 @@ export default function CareerApp() {
                   </span>
                   <div>
                     <strong>{completed.length}</strong>
-                    <span>активностей завершено</span>
+                    <span>{t("активностей завершено")}</span>
                   </div>
                 </div>
                 <div>
@@ -520,7 +577,7 @@ export default function CareerApp() {
                   </span>
                   <div>
                     <strong>{active.length}</strong>
-                    <span>в процессе развития</span>
+                    <span>{t("в процессе развития")}</span>
                   </div>
                 </div>
                 <div>
@@ -537,47 +594,50 @@ export default function CareerApp() {
                         ).length
                       }
                     </strong>
-                    <span>ключевых навыков для роста</span>
+                    <span>{t("ключевых навыков для роста")}</span>
                   </div>
                 </div>
               </section>
               <div className="section-title">
                 <div>
                   <div className="eyebrow green">
-                    С УЧЁТОМ ВАШЕГО ОПЫТА И ЦЕЛИ
+                    {t("С УЧЁТОМ ВАШЕГО ОПЫТА И ЦЕЛИ")}
                   </div>
                   <h2>
-                    Подобрано для вас{" "}
+                    {t("Подобрано для вас")}{" "}
                     <span className="count">{recs.length}</span>
                   </h2>
                   <p>
-                    Шаги, которые помогут сократить расстояние до следующего
-                    грейда.
+                    {t(
+                      "Шаги, которые помогут сократить расстояние до следующего грейда.",
+                    )}
                   </p>
                 </div>
                 <button className="text-button" onClick={() => navigate(2)}>
-                  Все активности →
+                  {t("Все активности →")}
                 </button>
               </div>
               <div className="recommendation-note">
-                ✧ Демо-подбор по навыкам, цели и истории. AI-сервис ещё не
-                подключён.
+                {t(
+                  "✧ Демо-подбор по навыкам, цели и истории. AI-сервис ещё не подключён.",
+                )}
               </div>
               <div className="event-grid">
                 {recs.map((r, i) => eventCard(r.event, i, r))}
               </div>
               {!recs.length && (
                 <div className="empty">
-                  Подходящих новых активностей пока нет. Проверьте текущий план
-                  или изучите каталог.
+                  {t(
+                    "Подходящих новых активностей пока нет. Проверьте текущий план или изучите каталог.",
+                  )}
                 </div>
               )}
               <section className="bottom-grid">
                 <article className="panel">
                   <div className="section-top">
-                    <h3>Навыки в фокусе</h3>
+                    <h3>{t("Навыки в фокусе")}</h3>
                     <button className="text-button" onClick={() => navigate(1)}>
-                      Все навыки ↗
+                      {t("Все навыки ↗")}
                     </button>
                   </div>
                   {requirements
@@ -599,18 +659,18 @@ export default function CareerApp() {
                     ))}
                 </article>
                 <article className="quote-panel">
-                  <span className="eyebrow">РАЗВИТИЕ — ЭТО ПУТЬ</span>
+                  <span className="eyebrow">{t("РАЗВИТИЕ — ЭТО ПУТЬ")}</span>
                   <h2>
-                    Не обязательно видеть
+                    {t("Не обязательно видеть")}
                     <br />
-                    всю лестницу.
+                    {t("всю лестницу.")}
                     <br />
-                    Сделайте первый шаг.
+                    {t("Сделайте первый шаг.")}
                   </h2>
                   <p>
-                    Выбирайте то, что интересно именно вам.
+                    {t("Выбирайте то, что интересно именно вам.")}
                     <br />
-                    Ваше развитие остаётся вашим выбором.
+                    {t("Ваше развитие остаётся вашим выбором.")}
                   </p>
                   <span className="quote-spark">✳</span>
                 </article>
@@ -622,10 +682,12 @@ export default function CareerApp() {
               <section className="panel">
                 <div className="section-top">
                   <div>
-                    <span className="eyebrow">{goal.role}</span>
-                    <h2>Ваш путь к {goal.grade}</h2>
+                    <span className="eyebrow">{t(goal.role)}</span>
+                    <h2>{t("Ваш путь к {0}", [t(goal.grade)])}</h2>
                   </div>
-                  <strong className="green">{percent}% готовности</strong>
+                  <strong className="green">
+                    {t("{0}% готовности", [percent])}
+                  </strong>
                 </div>
                 <div className="grade-path">
                   {grades.map((g) => (
@@ -646,27 +708,27 @@ export default function CareerApp() {
                             ? "◎"
                             : "○"}
                       </span>
-                      <strong>{g}</strong>
+                      <strong>{t(g)}</strong>
                       <small>
                         {g === employee.grade
-                          ? "Вы здесь"
+                          ? t("Вы здесь")
                           : g === goal.grade
-                            ? "Ваша цель"
-                            : "Этап карьеры"}
+                            ? t("Ваша цель")
+                            : t("Этап карьеры")}
                       </small>
                     </div>
                   ))}
                 </div>
                 <p className="subtle">
-                  Готовность — сумма достигнутых уровней, ограниченных
-                  требованиями цели, делённая на сумму требуемых уровней. Она не
-                  гарантирует повышение.
+                  {t(
+                    "Готовность — сумма достигнутых уровней, ограниченных требованиями цели, делённая на сумму требуемых уровней. Она не гарантирует повышение.",
+                  )}
                 </p>
               </section>
               <section className="panel spaced">
                 <div className="section-top">
-                  <h2>Карта навыков</h2>
-                  <span className="pill">Шкала 0–5</span>
+                  <h2>{t("Карта навыков")}</h2>
+                  <span className="pill">{t("Шкала 0–5")}</span>
                 </div>
                 <div className="skill-grid">
                   {requirements.map(([id, n]) => (
@@ -682,25 +744,25 @@ export default function CareerApp() {
                       />
                       <small>
                         {goal.critical_skills.includes(id)
-                          ? "Ключевой навык для перехода"
-                          : "Дополняет вашу экспертизу"}
-                        {(current[id] ?? 0) >= n ? " · Цель достигнута" : ""}
+                          ? t("Ключевой навык для перехода")
+                          : t("Дополняет вашу экспертизу")}
+                        {(current[id] ?? 0) >= n ? t(" · Цель достигнута") : ""}
                       </small>
                     </div>
                   ))}
                 </div>
               </section>
               <section className="panel spaced">
-                <h2>Мой план развития</h2>
+                <h2>{t("Мой план развития")}</h2>
                 {active.length ? (
                   active.map((h) => (
                     <div className="plan-row" key={h.record_id}>
                       <div>
                         <strong>
-                          {
+                          {t(
                             data.events.find((e) => e.event_id === h.event_id)
-                              ?.title
-                          }
+                              ?.title ?? h.event_id,
+                          )}
                         </strong>
                         <p>
                           {statusNames[h.status]} · {h.completion_pct}%
@@ -710,13 +772,15 @@ export default function CareerApp() {
                         className="button secondary"
                         onClick={() => complete(h)}
                       >
-                        Завершить в демо
+                        {t("Завершить в демо")}
                       </button>
                     </div>
                   ))
                 ) : (
                   <div className="empty">
-                    План пока пуст. Выберите первую активность в каталоге.
+                    {t(
+                      "План пока пуст. Выберите первую активность в каталоге.",
+                    )}
                   </div>
                 )}
               </section>
@@ -726,31 +790,33 @@ export default function CareerApp() {
             <>
               <div className="toolbar">
                 <input
-                  aria-label="Поиск активностей"
-                  placeholder="Поиск по названию или теме…"
+                  aria-label={t("Поиск активностей")}
+                  placeholder={t("Поиск по названию или теме…")}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
                 <select
-                  aria-label="Тип активности"
+                  aria-label={t("Тип активности")}
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                 >
-                  <option value="all">Все форматы</option>
+                  <option value="all">{t("Все форматы")}</option>
                   {Object.entries(typeNames).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}
                     </option>
                   ))}
                 </select>
-                <span className="subtle">Найдено: {catalog.length}</span>
+                <span className="subtle">
+                  {t("Найдено: {0}", [catalog.length])}
+                </span>
               </div>
               <div className="event-grid">
                 {catalog.map((e, i) => eventCard(e, i))}
               </div>
               {!catalog.length && (
                 <div className="empty">
-                  Ничего не найдено. Попробуйте другой запрос.
+                  {t("Ничего не найдено. Попробуйте другой запрос.")}
                 </div>
               )}
             </>
@@ -759,11 +825,11 @@ export default function CareerApp() {
             <section className="panel">
               <div className="toolbar">
                 <select
-                  aria-label="Статус активности"
+                  aria-label={t("Статус активности")}
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                 >
-                  <option value="all">Все статусы</option>
+                  <option value="all">{t("Все статусы")}</option>
                   {Object.entries(statusNames).map(([k, v]) => (
                     <option value={k} key={k}>
                       {v}
@@ -771,17 +837,17 @@ export default function CareerApp() {
                   ))}
                 </select>
                 <span className="subtle">
-                  История профиля {employee.employee_id}
+                  {t("История профиля {0}", [employee.employee_id])}
                 </span>
               </div>
               <div className="table-scroll">
                 <table>
                   <thead>
                     <tr>
-                      <th>Активность</th>
-                      <th>Дата</th>
-                      <th>Статус</th>
-                      <th>Прогресс</th>
+                      <th>{t("Активность")}</th>
+                      <th>{t("Дата")}</th>
+                      <th>{t("Статус")}</th>
+                      <th>{t("Прогресс")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -791,10 +857,12 @@ export default function CareerApp() {
                       .map((h) => (
                         <tr key={h.record_id}>
                           <td>
-                            {data.events.find((e) => e.event_id === h.event_id)
-                              ?.title ?? h.event_id}
+                            {t(
+                              data.events.find((e) => e.event_id === h.event_id)
+                                ?.title ?? h.event_id,
+                            )}
                           </td>
-                          <td>{h.date}</td>
+                          <td>{date(h.date)}</td>
                           <td>
                             <span
                               className={`pill ${h.status === "completed" ? "" : "neutral"}`}
@@ -810,7 +878,7 @@ export default function CareerApp() {
               </div>
               {!own.some((h) => filter === "all" || h.status === filter) && (
                 <div className="empty">
-                  Пока нет активностей с таким статусом.
+                  {t("Пока нет активностей с таким статусом.")}
                 </div>
               )}
             </section>
@@ -818,16 +886,19 @@ export default function CareerApp() {
           {tab === 4 && (
             <>
               <div className="recommendation-note">
-                Демонстрационный HR-экран на синтетических данных. Разграничение
-                доступа требует серверной авторизации.
+                {t(
+                  "Демонстрационный HR-экран на синтетических данных. Разграничение доступа требует серверной авторизации.",
+                )}
               </div>
               <section className="hr-stats">
                 <article className="panel">
-                  <span className="subtle">Сотрудников</span>
+                  <span className="subtle">{t("Сотрудников")}</span>
                   <strong>{employees.length}</strong>
                 </article>
                 <article className="panel">
-                  <span className="subtle">Средняя готовность к цели</span>
+                  <span className="subtle">
+                    {t("Средняя готовность к цели")}
+                  </span>
                   <strong>
                     {Math.round(
                       employees.reduce((n, e) => n + progress(e, history), 0) /
@@ -837,7 +908,9 @@ export default function CareerApp() {
                   </strong>
                 </article>
                 <article className="panel">
-                  <span className="subtle">Без завершений за 90 дней</span>
+                  <span className="subtle">
+                    {t("Без завершений за 90 дней")}
+                  </span>
                   <strong>
                     {
                       employees.filter(
@@ -855,16 +928,19 @@ export default function CareerApp() {
                 </article>
               </section>
               <section className="panel spaced">
-                <h2>Где команде нужна поддержка</h2>
+                <h2>{t("Где команде нужна поддержка")}</h2>
                 <p className="subtle">
-                  Число сотрудников с разрывом относительно личной карьерной
-                  цели.
+                  {t(
+                    "Число сотрудников с разрывом относительно личной карьерной цели.",
+                  )}
                 </p>
                 {deficits.map((s) => (
                   <div className="skill-row" key={s.skill_id}>
                     <div>
-                      <strong>{s.name}</strong>
-                      <span>{s.count} сотрудников</span>
+                      <strong>{t(s.name)}</strong>
+                      <span>
+                        {s.count} {t("сотрудников")}
+                      </span>
                     </div>
                     <Meter value={(s.count / employees.length) * 100} />
                   </div>
@@ -872,10 +948,10 @@ export default function CareerApp() {
               </section>
               <section className="panel spaced">
                 <div className="toolbar">
-                  <h2>Развитие команды</h2>
+                  <h2>{t("Развитие команды")}</h2>
                   <input
-                    aria-label="Поиск сотрудников"
-                    placeholder="Имя или подразделение…"
+                    aria-label={t("Поиск сотрудников")}
+                    placeholder={t("Имя или подразделение…")}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
@@ -884,10 +960,10 @@ export default function CareerApp() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Сотрудник</th>
-                        <th>Подразделение</th>
-                        <th>Грейд → цель</th>
-                        <th>Готовность</th>
+                        <th>{t("Сотрудник")}</th>
+                        <th>{t("Подразделение")}</th>
+                        <th>{t("Грейд → цель")}</th>
+                        <th>{t("Готовность")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -904,9 +980,9 @@ export default function CareerApp() {
                               {e.full_name}
                             </button>
                           </td>
-                          <td>{e.department}</td>
+                          <td>{t(e.department)}</td>
                           <td>
-                            {e.grade} → {target(e).grade}
+                            {t(e.grade)} → {t(target(e).grade)}
                           </td>
                           <td>{progress(e, history)}%</td>
                         </tr>
@@ -915,7 +991,7 @@ export default function CareerApp() {
                   </table>
                 </div>
                 {!hrEmployees.length && (
-                  <div className="empty">Сотрудники не найдены.</div>
+                  <div className="empty">{t("Сотрудники не найдены.")}</div>
                 )}
               </section>
             </>
@@ -925,15 +1001,18 @@ export default function CareerApp() {
               <span className="upload-icon">
                 <Icon name={5} size={36} />
               </span>
-              <h2>Новые данные. Более точный путь.</h2>
+              <h2>{t("Новые данные. Более точный путь.")}</h2>
               <p>
-                Выберите employees.json и activity_history.csv вместе или по
-                отдельности.
+                {t(
+                  "Выберите employees.json и activity_history.csv вместе или по отдельности.",
+                )}
                 <br />
-                Записи с существующими ID будут обновлены, новые — добавлены.
+                {t(
+                  "Записи с существующими ID будут обновлены, новые — добавлены.",
+                )}
               </p>
               <label className="button primary file-label">
-                Выбрать файлы
+                {t("Выбрать файлы")}
                 <input
                   type="file"
                   multiple
@@ -946,44 +1025,49 @@ export default function CareerApp() {
               </label>
               {error && (
                 <p className="error" role="alert">
-                  {error}
+                  {t(error)}
                 </p>
               )}
               <div className="import-info">
                 <div>
-                  <strong>01 / Профили</strong>
+                  <strong>{t("01 / Профили")}</strong>
                   <p>
-                    Объект с массивом employees или массив профилей. Используйте
-                    схему стартового датасета.
+                    {t(
+                      "Объект с массивом employees или массив профилей. Используйте схему стартового датасета.",
+                    )}
                   </p>
                 </div>
                 <div>
-                  <strong>02 / История</strong>
+                  <strong>{t("02 / История")}</strong>
                   <p>
-                    CSV с заголовками: record_id, employee_id, event_id, date,
-                    status, completion_pct.
+                    {t(
+                      "CSV с заголовками: record_id, employee_id, event_id, date, status, completion_pct.",
+                    )}
                   </p>
                 </div>
                 <div>
-                  <strong>03 / Результат</strong>
+                  <strong>{t("03 / Результат")}</strong>
                   <p>
-                    Данные сохраняются в этом браузере. Навыки, рекомендации и
-                    HR-срез пересчитываются автоматически.
+                    {t(
+                      "Данные сохраняются в этом браузере. Навыки, рекомендации и HR-срез пересчитываются автоматически.",
+                    )}
                   </p>
                 </div>
               </div>
               <p className="subtle">
-                Загружено: {employees.length} профилей · {history.length}{" "}
-                записей истории
+                {t("Загружено: {0} профилей · {1} записей истории", [
+                  employees.length,
+                  history.length,
+                ])}
               </p>
             </section>
           )}
           <footer>
             <span>
-              careerquest <span className="footer-dot">·</span> Развитие со
-              смыслом
+              careerquest <span className="footer-dot">·</span>{" "}
+              {t("Развитие со смыслом")}
             </span>
-            <span>Синтетические данные · HackAlem 2026</span>
+            <span>{t("Синтетические данные · HackAlem 2026")}</span>
           </footer>
         </main>
       </div>
@@ -998,7 +1082,7 @@ export default function CareerApp() {
           <>
             <button
               className="dialog-close"
-              aria-label="Закрыть"
+              aria-label={t("Закрыть")}
               onClick={() => setSelected(null)}
             >
               ×
@@ -1006,17 +1090,23 @@ export default function CareerApp() {
             <span className="pill">
               {typeNames[selected.type]} · {formatNames[selected.format]}
             </span>
-            <h2>{selected.title}</h2>
-            <p>{selected.description}</p>
+            <h2>{t(selected.title)}</h2>
+            <p>{t(selected.description)}</p>
             <div className="detail-meta">
-              <span>{selected.duration_hours} часов</span>
+              <span>{t("{0} ч.", [selected.duration_hours])}</span>
               <span>
                 {selected.format === "self_paced"
-                  ? "Можно начать в любое время"
-                  : `Ближайшая сессия: ${selected.upcoming_sessions.find((d) => d >= today) ?? "не назначена"}`}
+                  ? t("Можно начать в любое время")
+                  : t("Ближайшая сессия: {0}", [
+                      selected.upcoming_sessions.find((d) => d >= today)
+                        ? date(
+                            selected.upcoming_sessions.find((d) => d >= today)!,
+                          )
+                        : t("не назначена"),
+                    ])}
               </span>
             </div>
-            <h3>Что даст эта активность</h3>
+            <h3>{t("Что даст эта активность")}</h3>
             {selected.develops_skills.map((s) => (
               <div className="detail-skill" key={s.skill_id}>
                 <span>{skillName(s.skill_id)}</span>
@@ -1032,39 +1122,41 @@ export default function CareerApp() {
             ))}
             {recs.find((r) => r.event.event_id === selected.event_id) && (
               <div className="explanation">
-                <strong>Почему это подходит вам</strong>
+                <strong>{t("Почему это подходит вам")}</strong>
                 <p>
                   {recs
                     .find((r) => r.event.event_id === selected.event_id)!
-                    .gains.map(
-                      (g) =>
-                        `${skillName(g.id)}: уровень ${g.current} при требуемых ${g.required}${g.critical ? " (ключевой навык)" : ""}`,
+                    .gains.map((g) =>
+                      t("{0}: уровень {1} при требуемых {2}{3}", [
+                        skillName(g.id),
+                        g.current,
+                        g.required,
+                        g.critical ? t(" (ключевой навык)") : "",
+                      ]),
                     )
                     .join(". ")}
                   .
                 </p>
                 <p>
-                  В этом формате завершено:{" "}
-                  {
-                    recs.find((r) => r.event.event_id === selected.event_id)!
-                      .completed
-                  }
-                  ; пропусков и отказов:{" "}
-                  {
-                    recs.find((r) => r.event.event_id === selected.event_id)!
-                      .skipped
-                  }
-                  . Учтены длительность и условия участия.
+                  {t(
+                    "В этом формате завершено: {0}; пропусков и отказов: {1}. Учтены длительность и условия участия.",
+                    [
+                      recs.find((r) => r.event.event_id === selected.event_id)!
+                        .completed,
+                      recs.find((r) => r.event.event_id === selected.event_id)!
+                        .skipped,
+                    ],
+                  )}
                 </p>
               </div>
             )}
             <p className="subtle">
-              Для {selected.target_grades.join(", ")} ·{" "}
-              {selected.target_roles.join(", ")}
+              {t("Для")} {selected.target_grades.map((g) => t(g)).join(", ")} ·{" "}
+              {selected.target_roles.map((r) => t(r)).join(", ")}
             </p>
             {Object.entries(selected.prerequisites).length > 0 && (
               <p>
-                Условия:{" "}
+                {t("Условия:")}{" "}
                 {Object.entries(selected.prerequisites)
                   .map(([id, n]) => `${skillName(id)} ≥ ${n}`)
                   .join(", ")}
@@ -1081,7 +1173,7 @@ export default function CareerApp() {
                   navigate(1);
                 }}
               >
-                Перейти к моему плану →
+                {t("Перейти к моему плану →")}
               </button>
             ) : (
               <button
@@ -1104,16 +1196,25 @@ export default function CareerApp() {
                 }
                 onClick={() => enroll(selected)}
               >
-                Добавить в план развития →
+                {t("Добавить в план развития →")}
               </button>
             )}
             <p className="subtle">
-              Запись доступна при соответствии роли, грейду и условиям участия.
-              Завершённые и обязательные активности повторно не назначаются.
+              {t(
+                "Запись доступна при соответствии роли, грейду и условиям участия. Завершённые и обязательные активности повторно не назначаются.",
+              )}
             </p>
           </>
         )}
       </dialog>
     </div>
+  );
+}
+
+export default function CareerApp() {
+  return (
+    <LocaleProvider>
+      <CareerContent />
+    </LocaleProvider>
   );
 }

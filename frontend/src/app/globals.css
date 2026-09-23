@@ -1405,3 +1405,90 @@ dialog .button {
     scroll-behavior: auto !important;
   }
 }
+
+/* Language controls remain reachable in the compact mobile header. */
+.language-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.language-switch button {
+  border: 0;
+  border-radius: 5px;
+  padding: 6px 9px;
+  color: #68796c;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 600;
+  min-height: 32px;
+}
+.language-switch button:hover {
+  background: #f1f4ec;
+}
+.language-switch button[aria-pressed="true"] {
+  background: #e7efe2;
+  color: #285e45;
+}
+.topbar {
+  min-height: 80px;
+  height: auto;
+  gap: 16px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+}
+.topbar-right {
+  gap: 12px;
+}
+.sidebar-bottom > div {
+  min-width: 0;
+}
+.grade-path > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.journey-card h2 {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1150px) {
+  .topbar .demo-tag {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .topbar {
+    min-height: 56px;
+    gap: 10px;
+  }
+  .topbar > div:first-child {
+    flex: 1;
+    min-width: 100px;
+  }
+  .topbar .breadcrumb,
+  .topbar .slash {
+    display: none;
+  }
+  .language-switch button {
+    padding: 5px 8px;
+    min-height: 34px;
+  }
+  .journey-card > div:first-child {
+    max-width: 100%;
+  }
+  .journey-illustration {
+    opacity: 0.22;
+  }
+  .nav-item {
+    min-height: 44px;
+  }
+  .section-title {
+    flex-wrap: wrap;
+  }
+  .section-title > .text-button {
+    padding-top: 0;
+  }
+}
