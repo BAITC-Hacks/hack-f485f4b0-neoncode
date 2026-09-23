@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Career Quest frontend
 
-## Getting Started
+Next.js App Router, React, TypeScript. Русский, английский и казахский интерфейс.
 
-First, run the development server:
-
-```bash
+```sh
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Откройте http://localhost:3000. Это самостоятельное демо на синтетическом датасете; серверные заглушки пока не используются.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Сценарии
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Роль «Сотрудник»: обзор, цель и траектория, каталог и история. «Демо-роль → HR» открывает аналитику и импорт; переключатель демонстрирует UX и не обеспечивает безопасность.
+- Цель выбирается на экране траектории и сохраняется в браузере. Без цели прогресс относится к текущему уровню. Следующий уровень — предложение, Lead не получает ложное повышение до Lead.
+- При смене роли показываются обе роли и условия доступности обучения. Каталог объясняет причину недоступной записи.
+- Импорт применяется атомарно; повторный импорт во время обработки заблокирован. Обновлённый профиль задаёт новую базу оценки, и старые локальные отметки завершений больше не обходят её дату.
+- Если дата оценки не задана, исторический прирост не применяется без подтверждённой базы. Новые завершения в демо учитываются, включая день последней оценки.
+- Язык и выбранный профиль сохраняются. Если localStorage недоступен, приложение работает в текущей сессии и сообщает об ограничении сохранения.
 
-## Learn More
+## Структура
 
-To learn more about Next.js, take a look at the following resources:
+```text
+src/
+  app/                  страница, layout, стили, иконка
+  components/           оболочка, общие UI-элементы
+  features/
+    career/             контекст и демо-состояние
+    employee/           обзор, траектория, редактор цели
+    catalog/            каталог, карточка и диалог активности
+    history/            история сотрудника
+    hr/                 HR-экран и чистая функция аналитики
+    import/             экран загрузки файлов
+  lib/
+    domain.ts           явные типы предметной области
+    data.ts             адаптер сгенерированного датасета
+    career.ts           правила прогресса и доступности
+    validation.ts       проверка профилей, истории и CSV
+    import-data.ts      подготовка атомарного импорта
+    api/adapters.ts     граница моделей UI и текущих DTO backend
+    locales/            ru / en / kk
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Для подключения живого API замените загрузку и действия в `features/career/use-career-state.ts` API-сервисом, используя адаптеры. Сначала нужны рабочие серверные рекомендации, импорт, завершение и согласованный контракт каталогов/истории. Не передавайте клиенту HR-данные без серверной проверки доступа.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Проверки
 
-## Deploy on Vercel
+```sh
+npm run lint
+npm run format:check
+npm run build
+npx playwright install chromium
+npm test
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+30 тестов покрывают базовые сценарии, три языка, мобильные экраны, добровольный выбор цели, разделение демо-ролей, адаптеры API, импорт и расчёты. `npm run data:prepare` воспроизводит `dataset.json`; файл исключён из форматирования.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Текущее состояние всего проекта и серверные ограничения: [корневой README](../README.md), [отчёт проверки](../docs/PROJECT_REVIEW.md).
