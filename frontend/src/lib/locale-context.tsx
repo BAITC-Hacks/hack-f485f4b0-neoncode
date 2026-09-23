@@ -30,7 +30,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.title = translate(locale, "Career Quest — ваше развитие");
+    document.title = translate(locale, "ÖSU — ваше развитие");
     document
       .querySelector('meta[name="description"]')
       ?.setAttribute(

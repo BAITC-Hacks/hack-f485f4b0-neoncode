@@ -1,4 +1,4 @@
-# Career Quest frontend
+# ÖSU frontend
 
 Next.js App Router, React, TypeScript. Русский, английский и казахский интерфейс.
 

@@ -34,11 +34,11 @@ function CareerContent() {
     <div className="app-shell">
       <aside className="sidebar">
         <a href="#" className="brand" onClick={() => navigate(0)}>
-          <span className="brand-mark">
-            c<span>q</span>
+          <span className="brand-mark" aria-hidden="true">
+            Ö
           </span>
           <span>
-            career<span className="brand-light">quest</span>
+            ÖSU
             <small>{t("ПРОСТРАНСТВО РАЗВИТИЯ")}</small>
           </span>
         </a>
@@ -68,7 +68,6 @@ function CareerContent() {
           )}
         </nav>
         <div className="sidebar-note">
-          <span className="leaf">✳</span>
           <strong>
             {t("В своём темпе.")}
             <br />
@@ -185,7 +184,7 @@ function CareerContent() {
                 <div className="eyebrow green">
                   {tab === 0
                     ? t("ВАШ СЛЕДУЮЩИЙ ШАГ НАЧИНАЕТСЯ ЗДЕСЬ")
-                    : t("CAREER QUEST / РАЗВИТИЕ")}
+                    : t("ÖSU / РАЗВИТИЕ")}
                 </div>
                 <h1>
                   {tab === 0
@@ -235,10 +234,10 @@ function CareerContent() {
           </div>
           <footer>
             <span>
-              careerquest <span className="footer-dot">·</span>{" "}
+              ÖSU <span className="footer-dot">·</span>{" "}
               {t("Развитие со смыслом")}
             </span>
-            <span>{t("Синтетические данные · HackAlem 2026")}</span>
+            <span>{t("Синтетические данные")}</span>
           </footer>
         </main>
       </div>
