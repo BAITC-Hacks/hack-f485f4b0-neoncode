@@ -12,8 +12,8 @@ uv sync --locked
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Swagger: <http://127.0.0.1:8000/docs>. CORS allows the Next.js development origins `http://localhost:3000` and
-`http://127.0.0.1:3000`.
+Swagger: <http://127.0.0.1:8000/docs>. CORS allows `http://localhost:3000`,
+`http://127.0.0.1:3000` and `http://localhost:5173`.
 
 Configuration uses environment variables (see `.env.example`):
 
@@ -21,12 +21,16 @@ Configuration uses environment variables (see `.env.example`):
 | --- | --- | --- |
 | `DATA_DIR` | `backend/data/synthetic` (absolute) | Dataset directory |
 | `DATABASE_URL` | SQLite `backend/career_quest.db` (absolute) | Database location |
-| `LLM_API_KEY` | Unset | `source=mock`; when set, `source=fallback` in this scaffold |
+| `LLM_API_KEY` | Unset | Without a key: local scoring, `source=fallback` |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | OpenAI-compatible API base URL |
+| `LLM_MODEL` | `gpt-4o-mini` | Model used for candidate selection |
 
 Relative environment paths resolve against the working directory. `.env` is not
 loaded automatically; use `uv run --env-file .env uvicorn app.main:app` if needed.
-Next-grade gaps and event completion are implemented. LLM calls, ranking, import
-and HR aggregation remain stubs.
+Recommendations include next-grade gap calculation, fallback scoring and optional
+validated LLM selection. HR import, aggregate summaries and employee recommendation
+statuses are implemented. Profiles include grade progress and history; completion
+applies skill growth atomically with idempotent response replay.
 
 ## Data and persistence
 
@@ -42,7 +46,7 @@ Event input accepts dataset fields `target_roles`, `target_grades`,
 The default fixtures are explicitly synthetic: 10 employees, 8 events, 15 skills,
 8 role/grade profiles and 12 history rows. Each record has `synthetic: true`.
 Missing employee skills remain absent in profiles and count as level zero when
-calculating gaps or applying event gains.
+calculating gaps, recommendations or applying event gains.
 
 SQLAlchemy creates employees, employee_skills, skills, grade_requirements, events,
 activity_history and completions tables. Foreign keys are enabled. Completions
@@ -68,22 +72,24 @@ layer must supply them before external deployment.
 | Method | Path | Access | Current behavior |
 | --- | --- | --- | --- |
 | GET | `/api/employees/{id}` | Self / HR | 200, profile, progress and history |
-| GET | `/api/employees/{id}/recommendations` | Self / HR | 200, explicit stub, empty lists |
+| GET | `/api/employees/{id}/recommendations` | Self / HR | 200, scored recommendations or explicit empty state |
 | POST | `/api/employees/{id}/complete` | Self / HR | 200, skill growth or saved response |
-| POST | `/api/import` | HR | 501, validates employees + history, no writes |
-| GET | `/api/hr/summary` | HR | 200, explicit stub, null metrics |
-| GET | `/api/employees` | HR | 200, `{employees, total}` from SQLite |
+| POST | `/api/import` | HR | 200, atomic profile/history upsert from JSON or files |
+| GET | `/api/hr/summary` | HR | 200, aggregate skill gaps, missing steps and participation |
+| GET | `/api/employees` | HR | 200, `{employees, total}` with recommendation statuses |
 
-Stubs return `status: not_implemented`. A configured key does not mean an LLM was
-called: `source: fallback` is reserved for the future local scorer and results
-remain empty. Missing headers return 401, forbidden access 403, missing records
+Recommendations return `source: fallback`
+unless a valid LLM selection is used (`source: llm`). Missing headers return 401,
+forbidden access 403, missing records
 404, and schema/header validation errors 422. Validation errors use FastAPI's
-standard `HTTPValidationError`; other errors use `{detail: string}`.
+standard `HTTPValidationError`. Import errors use `detail` entries with `loc`,
+`msg` and `type`; other errors use `{detail: string}`.
 
 ### Grade progress
 
 `GET /api/employees/{id}` extends the dataset Employee with `progress` and `history`.
-The HR employee list and import Employee schema keep the dataset shape.
+Import accepts the dataset Employee shape. The HR employee list adds
+`recommendation_status` and `next_grade`, without detail progress or history.
 History is ordered by descending date, then record ID, and contains only this employee.
 
 `progress.next_grade` is the nearest higher grade defined for the employee's role,
@@ -120,6 +126,10 @@ a new completion; event repeat restrictions are not part of this endpoint yet.
 A legacy completion without a saved response returns 409 without applying gains.
 
 See [JSON examples](docs/examples.md) and [exported OpenAPI](docs/openapi.json).
+See [recommendation scoring and LLM contract](docs/recommendations.md) for all
+weights, eligibility rules, response states and explanation validation.
+See [HR and import guide](docs/hr.md) and the ready-to-import
+[three-profile synthetic example](docs/import-example.json).
 
 ## Verification and OpenAPI export
 
@@ -133,4 +143,7 @@ uv run ruff format --check app scripts tests
 OpenAPI export does not start the app, read the dataset, or create a database.
 Tests use temporary databases and check authorization, validation, CORS,
 startup seeding, rollback, completion uniqueness and replay, concurrent completions,
-gain caps, grade progress, import stub immutability, and OpenAPI consistency.
+gain caps, grade progress, the import/recommendation/completion cycle, recommendation
+ranking traps, HR aggregates, atomic JSON/file imports, immediate fallback recommendations
+for 3 imported profiles in under 2 seconds, LLM failures/timeouts, and OpenAPI consistency. LLM tests use
+mock HTTP transports and do not send dataset records to external services.

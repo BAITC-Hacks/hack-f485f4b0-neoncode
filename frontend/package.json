@@ -3,9 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "start": "vite preview",
+    "dev:next": "next dev",
+    "build:next": "next build",
+    "start:next": "next start",
+    "api:generate": "openapi-typescript ../backend/docs/openapi.json --default-non-nullable false -o src/api/types.ts",
+    "api:check": "openapi-typescript ../backend/docs/openapi.json --default-non-nullable false -o src/api/types.ts --check",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run",
     "lint": "eslint",
     "data:prepare": "node scripts/prepare-data.mjs",
     "test": "playwright test",
@@ -13,21 +20,29 @@
     "format:check": "prettier --check src scripts tests playwright.config.ts"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.103.2",
+    "lucide-react": "^1.47.0",
     "next": "16.3.6",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-router-dom": "^7.18.4",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.13.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.9",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   }
 }

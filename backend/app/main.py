@@ -32,10 +32,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
         description=(
-            "Backend foundation. Recommendation and HR summary responses are explicit stubs. "
+            "Career Quest. Recommendations use explicit scoring and validated LLM selection. "
+            "HR can import profiles/history and inspect aggregate skill gaps and participation. "
             "Profiles include next-grade progress and history. Completion applies skill growth "
-            "atomically with idempotent replay. Import returns 501 without writes. "
-            "All API routes require "
+            "atomically with idempotent replay. All API routes require "
             "X-Role and X-Employee-Id; these headers are trusted development identities."
         ),
     )

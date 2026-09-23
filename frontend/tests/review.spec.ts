@@ -106,7 +106,7 @@ test("corrupt saved history is rejected atomically and the app stays usable", as
   );
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(page.locator(".notice")).toContainText(
     "Сохранённые данные недоступны",
   );

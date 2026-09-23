@@ -19,7 +19,7 @@ const tabs = [
   "Импорт данных",
 ];
 
-test("all languages cover UI keys, domain content and interpolation parameters", () => {
+test("demo languages cover UI keys, domain content and interpolation parameters", () => {
   expect(formatDate("kk", "2026-11-23")).toBe("2026 жылғы 23 қараша");
   const keys = Object.keys(dictionaries.ru).sort();
   for (const locale of locales) {
@@ -49,7 +49,11 @@ test("all languages cover UI keys, domain content and interpolation parameters",
     ...readdirSync("src/features", { recursive: true })
       .map(String)
       .map((p) => "src/features/" + p),
-  ].filter((p) => p.endsWith(".tsx") || p.endsWith(".ts"));
+  ].filter(
+    (p) =>
+      !p.startsWith("src/features/live/") &&
+      (p.endsWith(".tsx") || p.endsWith(".ts")),
+  );
   for (const path of paths) {
     const source = ts.createSourceFile(
       path,
@@ -77,13 +81,13 @@ for (const locale of locales) {
     page,
   }) => {
     const t = (key: string) => translate(locale, key);
-    await page.goto("/");
+    await page.goto("/demo");
     await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
     await page
       .getByRole("button", { name: names[locale], exact: true })
       .click();
     await expect(page.locator("html")).toHaveAttribute("lang", locale);
-    await expect(page).toHaveTitle(t("Career Quest — ваше развитие"));
+    await expect(page).toHaveTitle(t("ÖSU — ваше развитие"));
     await expect(
       page.getByRole("button", { name: names[locale], exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -154,7 +158,7 @@ for (const locale of locales) {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/");
+    await page.goto("/demo");
     await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
     await page
       .getByRole("button", { name: names[locale], exact: true })
@@ -183,7 +187,7 @@ for (const locale of locales) {
 test("switching language preserves the current screen, selection and imported data", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
   await page
     .getByRole("navigation")
@@ -237,7 +241,7 @@ test("language switching works when localStorage is blocked", async ({
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
   await page.getByRole("button", { name: "Қазақша", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "kk");

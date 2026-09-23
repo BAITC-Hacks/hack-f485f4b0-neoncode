@@ -1,0 +1,17 @@
+.git
+.agents
+.codex
+**/.env
+**/.env.*
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.db
+**/*.db-*
+**/node_modules
+**/.next
+**/test-results
+**/playwright-report
+dataset
+backend/career-quest-backend

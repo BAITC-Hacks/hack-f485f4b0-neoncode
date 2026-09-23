@@ -62,7 +62,7 @@ test("import rejects invalid skills and parses quoted CSV", () => {
 test("employee can enroll, complete an activity and keep progress after reload", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
   await expect(
     page.getByRole("heading", { name: "Рады видеть вас, Togzhan." }),
@@ -94,7 +94,7 @@ test("employee can enroll, complete an activity and keep progress after reload",
   ).toBeVisible();
 });
 test("catalog search, HR and atomic import work", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
   await page
     .getByRole("button", { name: "Каталог активностей", exact: true })
@@ -141,7 +141,7 @@ test("catalog search, HR and atomic import work", async ({ page }) => {
 });
 test("mobile navigation fits the viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
   await expect(
     page.getByRole("heading", { name: "Рады видеть вас, Togzhan." }),
@@ -157,7 +157,7 @@ test("desktop overview has no browser errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 1100 });
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
   await expect(page.getByText("Подобрано для вас")).toBeVisible();
   await page.screenshot({ path: "test-results/desktop.png", fullPage: true });

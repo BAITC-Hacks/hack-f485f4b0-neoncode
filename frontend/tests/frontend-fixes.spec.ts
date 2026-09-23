@@ -118,7 +118,7 @@ test("cross-role recommendations preserve audience restrictions and return a spe
 test("employee and HR demo screens are separated explicitly", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(
     page
       .getByRole("navigation")
@@ -142,7 +142,7 @@ test("employee and HR demo screens are separated explicitly", async ({
 test("Lead chooses a career change voluntarily and the choice survives reload", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByLabel("Демо-профиль").selectOption(lead.employee_id);
   await expect(
     page.getByText("РАЗВИТИЕ В ТЕКУЩЕЙ РОЛИ", { exact: true }),
@@ -186,7 +186,7 @@ test("Lead chooses a career change voluntarily and the choice survives reload", 
 test("unavailable activities explain why enrollment is disabled", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Каталог активностей", exact: true })
