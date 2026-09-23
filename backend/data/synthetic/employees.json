@@ -1,0 +1,15 @@
+{
+  "meta": {"dataset": "Career Quest synthetic fixtures", "version": "1.0", "as_of_date": "2026-09-23", "synthetic": true},
+  "employees": [
+    {"employee_id": "SYN_E001", "full_name": "Synthetic Employee 01", "role": "Backend Engineer", "grade": "Junior", "tenure_months": 2, "skills": {"SK_PYTHON": 1, "SK_SQL": 1, "SK_API": 0, "SK_TEAMWORK": 2}, "synthetic": true},
+    {"employee_id": "SYN_E002", "full_name": "Synthetic Employee 02", "role": "Backend Engineer", "grade": "Junior", "tenure_months": 9, "skills": {"SK_PYTHON": 2, "SK_SQL": 1, "SK_GIT": 2, "SK_TESTING": 1}, "synthetic": true},
+    {"employee_id": "SYN_E003", "full_name": "Synthetic Employee 03", "role": "Backend Engineer", "grade": "Middle", "tenure_months": 18, "skills": {"SK_PYTHON": 3, "SK_SQL": 2, "SK_API": 2, "SK_DOCKER": 1}, "synthetic": true},
+    {"employee_id": "SYN_E004", "full_name": "Synthetic Employee 04", "role": "Backend Engineer", "grade": "Senior", "tenure_months": 40, "skills": {"SK_PYTHON": 4, "SK_DESIGN": 3, "SK_SECURITY": 3, "SK_MENTORING": 2}, "synthetic": true},
+    {"employee_id": "SYN_E005", "full_name": "Synthetic Employee 05", "role": "Backend Engineer", "grade": "Lead", "tenure_months": 62, "skills": {"SK_PYTHON": 5, "SK_DESIGN": 4, "SK_LEADERSHIP": 4, "SK_COMMUNICATION": 4}, "synthetic": true},
+    {"employee_id": "SYN_E006", "full_name": "Synthetic Employee 06", "role": "Data Analyst", "grade": "Junior", "tenure_months": 1, "skills": {"SK_SQL": 1, "SK_PYTHON": 0, "SK_COMMUNICATION": 2}, "synthetic": true},
+    {"employee_id": "SYN_E007", "full_name": "Synthetic Employee 07", "role": "Data Analyst", "grade": "Middle", "tenure_months": 14, "skills": {"SK_SQL": 3, "SK_PYTHON": 2, "SK_PLANNING": 2}, "synthetic": true},
+    {"employee_id": "SYN_E008", "full_name": "Synthetic Employee 08", "role": "Data Analyst", "grade": "Middle", "tenure_months": 24, "skills": {"SK_SQL": 3, "SK_PYTHON": 2, "SK_COMMUNICATION": 3, "SK_TESTING": 1}, "synthetic": true},
+    {"employee_id": "SYN_E009", "full_name": "Synthetic Employee 09", "role": "Data Analyst", "grade": "Senior", "tenure_months": 48, "skills": {"SK_SQL": 4, "SK_PYTHON": 3, "SK_MENTORING": 3, "SK_PLANNING": 3}, "synthetic": true},
+    {"employee_id": "SYN_E010", "full_name": "Synthetic Employee 10", "role": "Data Analyst", "grade": "Lead", "tenure_months": 72, "skills": {"SK_SQL": 5, "SK_PYTHON": 4, "SK_LEADERSHIP": 4, "SK_COMMUNICATION": 5}, "synthetic": true}
+  ]
+}
