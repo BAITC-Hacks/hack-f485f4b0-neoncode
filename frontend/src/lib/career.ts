@@ -1,5 +1,7 @@
 import raw from "./dataset.json";
-export type Employee = Omit<(typeof raw.employees)[number], "skills"> & { skills: Partial<Record<string, number>> };
+export type Employee = Omit<(typeof raw.employees)[number], "skills"> & {
+  skills: Partial<Record<string, number>>;
+};
 export type Event = (typeof raw.events)[number];
 export type History = {
   record_id: string;
@@ -25,14 +27,17 @@ export function target(employee: Employee) {
 }
 export function levels(employee: Employee, history: History[]) {
   const result: Record<string, number> = Object.fromEntries(
-    Object.entries(employee.skills).filter((entry): entry is [string, number] => typeof entry[1] === "number")
+    Object.entries(employee.skills).filter(
+      (entry): entry is [string, number] => typeof entry[1] === "number",
+    ),
   );
   history
     .filter(
       (h) =>
         h.employee_id === employee.employee_id &&
         h.status === "completed" &&
-        h.date > employee.last_review_date,
+        h.date > employee.last_review_date &&
+        h.date <= today,
     )
     .sort((a, b) => a.date.localeCompare(b.date))
     .forEach((h) => {
@@ -90,7 +95,9 @@ export function recommendations(employee: Employee, history: History[]) {
           id: s.skill_id,
           current: current[s.skill_id] ?? 0,
           required:
-            (goal.required_skills as Partial<Record<string, number>>)[s.skill_id] ?? 0,
+            (goal.required_skills as Partial<Record<string, number>>)[
+              s.skill_id
+            ] ?? 0,
           gain: Math.max(
             0,
             Math.min(s.gain, s.max_level - (current[s.skill_id] ?? 0)),
@@ -162,6 +169,14 @@ export function parseHistory(text: string): History[] {
     ].every((k) => header.includes(k))
   )
     throw new Error("CSV: отсутствуют обязательные столбцы истории.");
+  if (
+    new Set(header).size !== header.length ||
+    rows.some((row) => row.some(Boolean) && row.length !== header.length)
+  ) {
+    throw new Error(
+      "CSV: проверьте уникальность заголовков и число полей в строках.",
+    );
+  }
   return rows
     .filter((r) => r.some(Boolean))
     .map(
@@ -180,16 +195,22 @@ export function validateEmployees(value: unknown): Employee[] {
     if (
       !e ||
       typeof e.employee_id !== "string" ||
+      !e.employee_id.trim() ||
+      /\s/.test(e.employee_id) ||
       ids.has(e.employee_id) ||
       typeof e.full_name !== "string" ||
+      !e.full_name.trim() ||
       typeof e.department !== "string" ||
+      !e.department.trim() ||
+      !Number.isInteger(e.tenure_months) ||
+      e.tenure_months < 0 ||
       !data.role_profiles.some(
         (p) => p.role === e.role && p.grade === e.grade,
       ) ||
-      typeof e.last_review_date !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(e.last_review_date) ||
+      !isDatasetDate(e.last_review_date) ||
       !e.skills ||
       typeof e.skills !== "object" ||
+      Array.isArray(e.skills) ||
       !Object.entries(e.skills).every(
         ([id, n]) =>
           data.skills.some((s) => s.skill_id === id) &&
@@ -211,4 +232,77 @@ export function validateEmployees(value: unknown): Employee[] {
     ids.add(e.employee_id);
   }
   return list as Employee[];
+}
+
+/** Dates in the demo are bounded by the dataset snapshot, not the system clock. */
+export function isDatasetDate(value: unknown): value is string {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    value > today
+  )
+    return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+}
+
+/** Shared validation for file imports and restored browser state. */
+export function validateHistory(
+  value: unknown,
+  employees: Employee[],
+): History[] {
+  const message =
+    "История содержит неизвестные ID, статусы или некорректные даты и проценты.";
+  if (!Array.isArray(value)) throw new Error(message);
+  const employeeIds = new Set(employees.map((e) => e.employee_id));
+  const eventById = new Map(data.events.map((e) => [e.event_id, e]));
+  const ids = new Set<string>();
+  const completed = new Set<string>();
+  for (const row of value) {
+    if (
+      !row ||
+      typeof row !== "object" ||
+      typeof row.record_id !== "string" ||
+      !row.record_id.trim() ||
+      /\s/.test(row.record_id) ||
+      ids.has(row.record_id) ||
+      !employeeIds.has(row.employee_id) ||
+      !eventById.has(row.event_id) ||
+      !isDatasetDate(row.date) ||
+      typeof row.completion_pct !== "string" ||
+      !/^\d+$/.test(row.completion_pct)
+    )
+      throw new Error(message);
+    const percentage = Number(row.completion_pct);
+    const validStatus =
+      row.status === "completed"
+        ? percentage === 100
+        : ["no_show", "declined"].includes(row.status)
+          ? percentage === 0
+          : row.status === "dropped"
+            ? percentage >= 5 && percentage <= 95
+            : ["in_progress", "overdue"].includes(row.status)
+              ? percentage >= 0 && percentage <= 95
+              : false;
+    if (!validStatus) throw new Error(message);
+    ids.add(row.record_id);
+    const event = eventById.get(row.event_id)!;
+    // Annual mandatory training and the recurring speaking club can repeat.
+    if (
+      row.status === "completed" &&
+      !event.mandatory &&
+      event.event_id !== "EV_036"
+    ) {
+      const key = JSON.stringify([row.employee_id, row.event_id]);
+      if (completed.has(key))
+        throw new Error(
+          "История содержит повторное завершение неповторяемой активности.",
+        );
+      completed.add(key);
+    }
+  }
+  return value as History[];
 }
