@@ -1,4 +1,5 @@
 "use client";
+import { OpeningExperience } from "@/components/opening-experience";
 import { useCareer } from "@/features/career/career-context";
 import { today } from "@/lib/career";
 import { Icon } from "@/components/ui/primitives";
@@ -128,7 +129,7 @@ function CareerContent() {
             <span className="avatar small">{employee.full_name[0]}</span>
           </div>
         </header>
-        <main>
+        <main tabIndex={-1}>
           <div className="profile-switch">
             <label htmlFor="demo-role">{t("Демо-роль")}</label>
             <select
@@ -249,7 +250,9 @@ export default function CareerApp() {
   return (
     <LocaleProvider>
       <CareerProvider>
-        <CareerContent />
+        <OpeningExperience>
+          <CareerContent />
+        </OpeningExperience>
       </CareerProvider>
     </LocaleProvider>
   );
