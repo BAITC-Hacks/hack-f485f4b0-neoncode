@@ -16,4 +16,4 @@ class Settings:
         )
     )
     llm_api_key: str | None = field(default_factory=lambda: os.getenv("LLM_API_KEY") or None)
-    cors_origins: tuple[str, ...] = ("http://localhost:5173",)
+    cors_origins: tuple[str, ...] = ("http://localhost:3000", "http://127.0.0.1:3000")

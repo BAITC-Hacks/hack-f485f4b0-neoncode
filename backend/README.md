@@ -12,7 +12,8 @@ uv sync --locked
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Swagger: <http://127.0.0.1:8000/docs>. CORS allows `http://localhost:5173`.
+Swagger: <http://127.0.0.1:8000/docs>. CORS allows the Next.js development origins `http://localhost:3000` and
+`http://127.0.0.1:3000`.
 
 Configuration uses environment variables (see `.env.example`):
 

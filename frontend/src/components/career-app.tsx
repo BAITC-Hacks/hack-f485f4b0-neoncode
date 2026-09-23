@@ -12,6 +12,7 @@ import {
   target,
   today,
   validateEmployees,
+  validateHistory,
   type Employee,
   type Event,
   type History,
@@ -108,8 +109,13 @@ function CareerContent() {
       const saved = localStorage.getItem("career-quest-v1");
       if (saved) {
         const state = JSON.parse(saved);
-        setEmployees(validateEmployees(state.employees));
-        if (Array.isArray(state.history)) setHistory(state.history);
+        const restoredEmployees = validateEmployees(state.employees);
+        const restoredHistory = validateHistory(
+          state.history,
+          restoredEmployees,
+        );
+        setEmployees(restoredEmployees);
+        setHistory(restoredHistory);
       }
     } catch {
       setNotice("Сохранённые данные недоступны. Загружен исходный датасет.");
@@ -218,22 +224,7 @@ function CareerContent() {
         } else
           throw new Error("Поддерживаются только JSON профилей и CSV истории.");
       }
-      if (
-        nextHistory.some(
-          (h) =>
-            !h.record_id ||
-            !nextEmployees.some((e) => e.employee_id === h.employee_id) ||
-            !data.events.some((e) => e.event_id === h.event_id) ||
-            !statusNames[h.status] ||
-            !/^\d{4}-\d{2}-\d{2}$/.test(h.date) ||
-            !Number.isFinite(Number(h.completion_pct)) ||
-            Number(h.completion_pct) < 0 ||
-            Number(h.completion_pct) > 100,
-        )
-      )
-        throw new Error(
-          "История содержит неизвестные ID, статусы или некорректные даты и проценты.",
-        );
+      validateHistory(nextHistory, nextEmployees);
       setEmployees(nextEmployees);
       setHistory(nextHistory);
       setNotice(

@@ -337,5 +337,7 @@
   "Time & Priority Management": "Time & Priority Management",
   "Planning your week, managing interruptions and adapting to shifting priorities.": "Planning your week, managing interruptions and adapting to shifting priorities.",
   "Structured Problem Solving": "Structured Problem Solving",
-  "Team exercises on framing problems, testing hypotheses and deciding together.": "Team exercises on framing problems, testing hypotheses and deciding together."
+  "Team exercises on framing problems, testing hypotheses and deciding together.": "Team exercises on framing problems, testing hypotheses and deciding together.",
+  "CSV: проверьте уникальность заголовков и число полей в строках.": "CSV: check for duplicate headers and incorrect field counts.",
+  "История содержит повторное завершение неповторяемой активности.": "History contains a repeated completion of a non-repeatable activity."
 }

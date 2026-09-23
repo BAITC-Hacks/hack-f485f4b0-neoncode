@@ -167,17 +167,18 @@ def test_import_rejects_invalid_dataset(client, hr_headers):
     assert response.status_code == 422
 
 
-def test_cors_preflight(client):
+@pytest.mark.parametrize("origin", ["http://localhost:3000", "http://127.0.0.1:3000"])
+def test_cors_preflight(client, origin):
     response = client.options(
         "/api/employees/SYN_E001/complete",
         headers={
-            "Origin": "http://localhost:5173",
+            "Origin": origin,
             "Access-Control-Request-Method": "POST",
             "Access-Control-Request-Headers": "content-type,x-role,x-employee-id",
         },
     )
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert response.headers["access-control-allow-origin"] == origin
     response = client.options(
         "/api/employees",
         headers={
