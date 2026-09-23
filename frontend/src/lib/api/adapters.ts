@@ -1,32 +1,18 @@
-import type { Employee, Event, Grade, SkillGain, SkillLevels } from "../domain";
-import { validateEmployees } from "../validation";
-/** DTOs reflect the current backend contract; the UI never stores API-specific field names. */
-export interface EmployeeDto {
-  employee_id: string;
-  role: string;
-  grade: Grade;
-  tenure_months: number;
-  skills: SkillLevels;
-  full_name?: string | null;
-  department?: string | null;
-  last_review_date?: string | null;
-  career_goal?: Employee["career_goal"];
-}
-export interface EventDto {
-  event_id: string;
-  type: Event["type"];
-  audience: { roles: string[]; grades: Grade[] };
-  skills: SkillGain[];
-  title?: string | null;
-  description?: string;
-  format?: Event["format"] | null;
-  duration_hours?: number | null;
-  mandatory?: boolean;
-  prerequisites?: SkillLevels;
-  upcoming_sessions?: string[];
-}
+import type { Employee, Event } from "../domain";
+import type { components } from "@/api/types";
+import type { ImportRequest } from "@/api/client";
+
+// Compatibility bridge for the standalone demo only. Live screens use API fields directly.
+export type EmployeeDto = ImportRequest["employees"][number];
+export type EventDto = components["schemas"]["Event"];
 export function employeeFromApi(dto: EmployeeDto): Employee {
-  return validateEmployees([dto])[0];
+  return {
+    ...dto,
+    full_name: dto.full_name ?? dto.employee_id,
+    department: dto.department ?? dto.role,
+    career_goal: dto.career_goal ?? null,
+    last_review_date: dto.last_review_date ?? null,
+  };
 }
 export function eventFromApi(dto: EventDto): Event {
   // Unknown scheduling data must not be silently treated as a self-paced course.

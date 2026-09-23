@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("opening covers the viewport, then releases the page automatically", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   const opening = page.locator(".opening");
   await expect(opening).toBeVisible();
   const bounds = await opening.boundingBox();
@@ -25,7 +25,7 @@ test("opening covers the viewport, then releases the page automatically", async 
 test("opening supports skipping and Escape, restores focus and scrolling", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("button", { name: "Перейти к пространству" }).click();
   await expect(page.locator(".opening")).toHaveCount(0);
   await expect(page.locator("main")).toBeFocused();
@@ -45,7 +45,7 @@ test("reduced motion opens directly into an interactive workspace", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(page.locator(".opening")).toHaveCount(0);
   await expect(page.locator(".opening-experience > div")).not.toHaveAttribute(
     "inert",
