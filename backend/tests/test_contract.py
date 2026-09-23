@@ -104,23 +104,17 @@ def test_configured_key_does_not_claim_live_llm(settings, employee_headers):
         assert response.json()["status"] == "not_implemented"
 
 
-def test_write_stubs_do_not_mutate_state(client, employee_headers, hr_headers):
+def test_import_stub_does_not_mutate_state(client, employee_headers, hr_headers):
     profile = client.get("/api/employees/SYN_E001", headers=employee_headers).json()
-    for _ in range(2):
-        response = client.post(
-            "/api/employees/SYN_E001/complete",
-            headers=employee_headers,
-            json={"event_id": "SYN_EV001", "completion_id": "same-request"},
-        )
-        assert response.status_code == 501
-        assert response.json()["status"] == "not_implemented"
-        assert response.json()["skills"] == profile["skills"]
+    dataset_employee = {
+        key: value for key, value in profile.items() if key not in {"progress", "history"}
+    }
     response = client.post(
         "/api/import",
         headers=hr_headers,
         json={
             "meta": {"synthetic": True},
-            "employees": [{**profile, "employee_id": "SYN_NEW"}],
+            "employees": [{**dataset_employee, "employee_id": "SYN_NEW"}],
             "history": [
                 {
                     "employee_id": "SYN_NEW",

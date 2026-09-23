@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Career Quest API",
-    "description": "Backend foundation. Recommendation and HR summary responses are explicit stubs. Completion and import return 501 without writes. All API routes require X-Role and X-Employee-Id; these headers are trusted development identities.",
+    "description": "Backend foundation. Recommendation and HR summary responses are explicit stubs. Profiles include next-grade progress and history. Completion applies skill growth atomically with idempotent replay. Import returns 501 without writes. All API routes require X-Role and X-Employee-Id; these headers are trusted development identities.",
     "version": "0.1.0"
   },
   "paths": {
@@ -383,7 +383,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Employee"
+                  "$ref": "#/components/schemas/EmployeeProfile"
                 }
               }
             }
@@ -547,9 +547,9 @@
         "tags": [
           "employees"
         ],
-        "summary": "Complete Event",
-        "description": "Contract stub: no completion, history or skill changes are persisted.",
-        "operationId": "complete_event_api_employees__id__complete_post",
+        "summary": "Post Completion",
+        "description": "Apply skill growth atomically; replay the saved response for the same completion key.",
+        "operationId": "post_completion_api_employees__id__complete_post",
         "parameters": [
           {
             "name": "id",
@@ -610,7 +610,7 @@
           }
         },
         "responses": {
-          "501": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -642,6 +642,26 @@
           },
           "404": {
             "description": "Employee or event not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Event audience does not match employee",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stored completion has no replay response",
             "content": {
               "application/json": {
                 "schema": {
@@ -902,14 +922,10 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "completed",
-              "already_completed",
-              "not_implemented"
-            ],
+            "const": "completed",
             "title": "Status"
           },
-          "skills": {
+          "skills_before": {
             "patternProperties": {
               "^\\S+$": {
                 "type": "integer",
@@ -922,7 +938,25 @@
               "minLength": 1
             },
             "type": "object",
-            "title": "Skills"
+            "title": "Skills Before"
+          },
+          "skills_after": {
+            "patternProperties": {
+              "^\\S+$": {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 0.0
+              }
+            },
+            "propertyNames": {
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "type": "object",
+            "title": "Skills After"
+          },
+          "progress_after": {
+            "$ref": "#/components/schemas/GradeProgress"
           }
         },
         "additionalProperties": false,
@@ -932,7 +966,9 @@
           "event_id",
           "completion_id",
           "status",
-          "skills"
+          "skills_before",
+          "skills_after",
+          "progress_after"
         ],
         "title": "CompletionResponse"
       },
@@ -1133,6 +1169,181 @@
         ],
         "title": "Employee"
       },
+      "EmployeeProfile": {
+        "properties": {
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic",
+            "default": false
+          },
+          "employee_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^\\S+$",
+            "title": "Employee Id"
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Role"
+          },
+          "grade": {
+            "type": "string",
+            "enum": [
+              "Junior",
+              "Middle",
+              "Senior",
+              "Lead"
+            ],
+            "title": "Grade"
+          },
+          "tenure_months": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Tenure Months"
+          },
+          "skills": {
+            "patternProperties": {
+              "^\\S+$": {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 0.0
+              }
+            },
+            "propertyNames": {
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "type": "object",
+            "title": "Skills"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "manager_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^\\S+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Id"
+          },
+          "hire_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hire Date"
+          },
+          "work_format": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "office",
+                  "hybrid",
+                  "remote"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Format"
+          },
+          "preferred_language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "kk",
+                  "ru",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Language"
+          },
+          "career_goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CareerGoal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_review_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Review Date"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/GradeProgress"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityHistory"
+            },
+            "type": "array",
+            "title": "History"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "employee_id",
+          "role",
+          "grade",
+          "tenure_months",
+          "skills",
+          "progress",
+          "history"
+        ],
+        "title": "EmployeeProfile"
+      },
       "EmployeesResponse": {
         "properties": {
           "employees": {
@@ -1289,6 +1500,125 @@
           "skills"
         ],
         "title": "Event"
+      },
+      "GradeProgress": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "needs_development",
+              "requirements_met",
+              "no_next_grade"
+            ],
+            "title": "Status"
+          },
+          "next_grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Junior",
+                  "Middle",
+                  "Senior",
+                  "Lead"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Grade"
+          },
+          "requirements": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GradeRequirement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/SkillGap"
+            },
+            "type": "array",
+            "title": "Gaps"
+          },
+          "remaining_points": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Remaining Points",
+            "description": "Sum of skill deficits for the next grade"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "next_grade",
+          "requirements",
+          "gaps",
+          "remaining_points"
+        ],
+        "title": "GradeProgress"
+      },
+      "GradeRequirement": {
+        "properties": {
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic",
+            "default": false
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "grade": {
+            "type": "string",
+            "enum": [
+              "Junior",
+              "Middle",
+              "Senior",
+              "Lead"
+            ],
+            "title": "Grade"
+          },
+          "required_skills": {
+            "patternProperties": {
+              "^\\S+$": {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 0.0
+              }
+            },
+            "propertyNames": {
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "type": "object",
+            "title": "Required Skills"
+          },
+          "critical_skills": {
+            "items": {
+              "type": "string",
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\S+$"
+            },
+            "type": "array",
+            "title": "Critical Skills"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role",
+          "grade",
+          "required_skills"
+        ],
+        "title": "GradeRequirement"
       },
       "HRSummaryResponse": {
         "properties": {
@@ -1578,6 +1908,12 @@
             "maximum": 5.0,
             "minimum": 0.0,
             "title": "Required Level"
+          },
+          "deficit": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Deficit"
           }
         },
         "additionalProperties": false,
@@ -1585,7 +1921,8 @@
         "required": [
           "skill_id",
           "current_level",
-          "required_level"
+          "required_level",
+          "deficit"
         ],
         "title": "SkillGap"
       },
