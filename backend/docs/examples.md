@@ -8,7 +8,7 @@ POST requests use `Content-Type: application/json`.
 
 ## GET /api/employees/SYN_E001
 
-200 response:
+200 response excerpt (profile fields shown; `progress` and `history` follow below):
 
 ```json
 {
@@ -26,6 +26,59 @@ POST requests use `Content-Type: application/json`.
   "preferred_language": null,
   "career_goal": null,
   "last_review_date": null
+}
+```
+
+The same response also contains:
+
+```json
+{
+  "progress": {
+    "status": "needs_development",
+    "next_grade": "Middle",
+    "requirements": {
+      "role": "Backend Engineer",
+      "grade": "Middle",
+      "required_skills": {"SK_PYTHON": 3, "SK_SQL": 2, "SK_API": 2, "SK_TESTING": 2},
+      "critical_skills": ["SK_PYTHON", "SK_API"],
+      "synthetic": true
+    },
+    "gaps": [
+      {"skill_id": "SK_API", "current_level": 0, "required_level": 2, "deficit": 2},
+      {"skill_id": "SK_PYTHON", "current_level": 1, "required_level": 3, "deficit": 2},
+      {"skill_id": "SK_TESTING", "current_level": 0, "required_level": 2, "deficit": 2},
+      {"skill_id": "SK_SQL", "current_level": 1, "required_level": 2, "deficit": 1}
+    ],
+    "remaining_points": 7
+  },
+  "history": [
+    {
+      "synthetic": true,
+      "employee_id": "SYN_E001",
+      "event_id": "SYN_EV001",
+      "date": "2026-09-01",
+      "status": "in_progress",
+      "record_id": "SYN_R011",
+      "due_date": null,
+      "completion_pct": 35,
+      "score": null,
+      "feedback_rating": null,
+      "assigned_by": "self"
+    },
+    {
+      "synthetic": true,
+      "employee_id": "SYN_E001",
+      "event_id": "SYN_EV007",
+      "date": "2026-08-01",
+      "status": "completed",
+      "record_id": "SYN_R001",
+      "due_date": "2026-08-15",
+      "completion_pct": 100,
+      "score": 90,
+      "feedback_rating": 4,
+      "assigned_by": "hr"
+    }
+  ]
 }
 ```
 
@@ -51,17 +104,41 @@ Request:
 {"event_id": "SYN_EV001", "completion_id": "synthetic-request-001"}
 ```
 
-501 response (skills are unchanged):
+200 response for a fresh synthetic database:
 
 ```json
 {
   "employee_id": "SYN_E001",
   "event_id": "SYN_EV001",
   "completion_id": "synthetic-request-001",
-  "status": "not_implemented",
-  "skills": {"SK_PYTHON": 1, "SK_SQL": 1, "SK_API": 0, "SK_TEAMWORK": 2}
+  "status": "completed",
+  "skills_before": {"SK_PYTHON": 1, "SK_SQL": 1, "SK_API": 0, "SK_TEAMWORK": 2},
+  "skills_after": {"SK_PYTHON": 2, "SK_SQL": 1, "SK_API": 0, "SK_TEAMWORK": 2},
+  "progress_after": {
+    "status": "needs_development",
+    "next_grade": "Middle",
+    "requirements": {
+      "role": "Backend Engineer",
+      "grade": "Middle",
+      "required_skills": {"SK_PYTHON": 3, "SK_SQL": 2, "SK_API": 2, "SK_TESTING": 2},
+      "critical_skills": ["SK_PYTHON", "SK_API"],
+      "synthetic": true
+    },
+    "gaps": [
+      {"skill_id": "SK_API", "current_level": 0, "required_level": 2, "deficit": 2},
+      {"skill_id": "SK_TESTING", "current_level": 0, "required_level": 2, "deficit": 2},
+      {"skill_id": "SK_PYTHON", "current_level": 2, "required_level": 3, "deficit": 1},
+      {"skill_id": "SK_SQL", "current_level": 1, "required_level": 2, "deficit": 1}
+    ],
+    "remaining_points": 6
+  }
 }
 ```
+
+Repeat the exact request: the response stays identical and Python remains at 2.
+GET the profile again to see the saved skill level and a new completed history row.
+The employee's grade is still Junior. The remaining points measure skill deficits,
+not a count of events. For a Lead profile, progress has `status: no_next_grade`.
 
 ## POST /api/import
 
@@ -124,7 +201,8 @@ HR-only 200 response:
 ## GET /api/employees
 
 HR-only 200 response: `{"employees": [Employee, ...], "total": 10}` for the
-default fixtures. Each item uses the complete Employee shape shown above.
+default fixtures. Each item uses the dataset Employee shape shown above, without
+the detail endpoint's `progress` and `history` fields.
 
 ## Event and skill contracts
 
