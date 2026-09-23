@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import ts from "typescript";
 import { data } from "../src/lib/career";
 import {
@@ -42,25 +42,35 @@ test("all languages cover UI keys, domain content and interpolation parameters",
       expect(dictionaries[locale][employee.department]).toBeTruthy();
     }
   }
-  const text = readFileSync("src/components/career-app.tsx", "utf8");
-  const source = ts.createSourceFile(
-    "app.tsx",
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
-  function walk(node: ts.Node) {
-    if (
-      ts.isCallExpression(node) &&
-      node.expression.getText(source) === "t" &&
-      ts.isStringLiteral(node.arguments[0])
-    )
-      expect(keys).toContain(node.arguments[0].text);
-    if (ts.isJsxText(node)) expect(node.text).not.toMatch(/[А-Яа-яЁё]/);
-    ts.forEachChild(node, walk);
+  const paths = [
+    ...readdirSync("src/components", { recursive: true })
+      .map(String)
+      .map((p) => "src/components/" + p),
+    ...readdirSync("src/features", { recursive: true })
+      .map(String)
+      .map((p) => "src/features/" + p),
+  ].filter((p) => p.endsWith(".tsx") || p.endsWith(".ts"));
+  for (const path of paths) {
+    const source = ts.createSourceFile(
+      path,
+      readFileSync(path, "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+      path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    );
+    function walk(node: ts.Node) {
+      if (
+        ts.isCallExpression(node) &&
+        node.expression.getText(source) === "t" &&
+        node.arguments[0] &&
+        ts.isStringLiteral(node.arguments[0])
+      )
+        expect(keys).toContain(node.arguments[0].text);
+      if (ts.isJsxText(node)) expect(node.text).not.toMatch(/[А-Яа-яЁё]/);
+      ts.forEachChild(node, walk);
+    }
+    walk(source);
   }
-  walk(source);
 });
 for (const locale of locales) {
   test(`${locale}: translated screens, search, activity details, errors and persistence`, async ({
@@ -68,6 +78,7 @@ for (const locale of locales) {
   }) => {
     const t = (key: string) => translate(locale, key);
     await page.goto("/");
+    await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
     await page
       .getByRole("button", { name: names[locale], exact: true })
       .click();
@@ -144,6 +155,7 @@ for (const locale of locales) {
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
+    await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
     await page
       .getByRole("button", { name: names[locale], exact: true })
       .click();
@@ -172,6 +184,7 @@ test("switching language preserves the current screen, selection and imported da
   page,
 }) => {
   await page.goto("/");
+  await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Импорт данных", exact: true })
@@ -225,6 +238,7 @@ test("language switching works when localStorage is blocked", async ({
     });
   });
   await page.goto("/");
+  await page.getByLabel("Демо-роль", { exact: true }).selectOption("hr");
   await page.getByRole("button", { name: "Қазақша", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "kk");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
