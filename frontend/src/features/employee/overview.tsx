@@ -74,7 +74,7 @@ export function OverviewScreen() {
           <div
             className="ring"
             style={{
-              background: `conic-gradient(#34785f ${percent}%, #edf0e9 0)`,
+              background: `conic-gradient(var(--green) ${percent}%, var(--green-soft) 0)`,
             }}
           >
             <div>
