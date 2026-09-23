@@ -33,8 +33,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
         description=(
             "Career Quest. Recommendations use explicit scoring and validated LLM selection. "
-            "HR summary is a stub. "
-            "Completion and import return 501 without writes. All API routes require "
+            "HR can import profiles/history and inspect aggregate skill gaps and participation. "
+            "Completion is a stub returning 501. All API routes require "
             "X-Role and X-Employee-Id; these headers are trusted development identities."
         ),
     )

@@ -85,13 +85,11 @@ def test_recommendations_and_summary_contract(client, employee_headers, hr_heade
     assert all(len(r["reasons"]) == 4 for r in body["recommendations"])
     response = client.get("/api/hr/summary", headers=hr_headers)
     assert response.status_code == 200
-    assert response.json() == {
-        "status": "not_implemented",
-        "total_employees": None,
-        "total_events": None,
-        "completed_activities": None,
-        "employees_by_grade": None,
-    }
+    summary = response.json()
+    assert summary["status"] == "ready"
+    assert summary["total_employees"] == 10
+    assert summary["total_events"] == 8
+    assert summary["completed_activities"] == 6
 
 
 def test_configured_key_uses_fallback_on_failure(settings, employee_headers, monkeypatch):
@@ -108,7 +106,7 @@ def test_configured_key_uses_fallback_on_failure(settings, employee_headers, mon
         assert response.json()["status"] == "ready"
 
 
-def test_write_stubs_do_not_mutate_state(client, employee_headers, hr_headers):
+def test_completion_stub_does_not_mutate_state(client, employee_headers):
     profile = client.get("/api/employees/SYN_E001", headers=employee_headers).json()
     for _ in range(2):
         response = client.post(
@@ -119,31 +117,6 @@ def test_write_stubs_do_not_mutate_state(client, employee_headers, hr_headers):
         assert response.status_code == 501
         assert response.json()["status"] == "not_implemented"
         assert response.json()["skills"] == profile["skills"]
-    response = client.post(
-        "/api/import",
-        headers=hr_headers,
-        json={
-            "meta": {"synthetic": True},
-            "employees": [{**profile, "employee_id": "SYN_NEW"}],
-            "history": [
-                {
-                    "employee_id": "SYN_NEW",
-                    "event_id": "SYN_EV001",
-                    "date": "2026-09-23",
-                    "status": "completed",
-                    "synthetic": True,
-                }
-            ],
-        },
-    )
-    assert response.status_code == 501
-    assert response.json() == {
-        "status": "not_implemented",
-        "employees_received": 1,
-        "history_received": 1,
-        "employees_imported": 0,
-        "history_imported": 0,
-    }
     assert client.get("/api/employees/SYN_E001", headers=employee_headers).json() == profile
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(models.Completion)) == 0

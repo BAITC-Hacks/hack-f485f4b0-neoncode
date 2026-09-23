@@ -27,8 +27,8 @@ Configuration uses environment variables (see `.env.example`):
 Relative environment paths resolve against the working directory. `.env` is not
 loaded automatically; use `uv run --env-file .env uvicorn app.main:app` if needed.
 Recommendations include next-grade gap calculation, fallback scoring and optional
-validated LLM selection. Completion, import and HR aggregation remain stubs in
-this checkout.
+validated LLM selection. HR import, aggregate summaries and employee recommendation
+statuses are implemented. Completion remains a stub in this checkout.
 
 ## Data and persistence
 
@@ -71,19 +71,22 @@ layer must supply them before external deployment.
 | GET | `/api/employees/{id}` | Self / HR | 200, Employee from SQLite |
 | GET | `/api/employees/{id}/recommendations` | Self / HR | 200, scored recommendations or explicit empty state |
 | POST | `/api/employees/{id}/complete` | Self / HR | 501, explicit stub, no writes |
-| POST | `/api/import` | HR | 501, validates employees + history, no writes |
-| GET | `/api/hr/summary` | HR | 200, explicit stub, null metrics |
-| GET | `/api/employees` | HR | 200, `{employees, total}` from SQLite |
+| POST | `/api/import` | HR | 200, atomic profile/history upsert from JSON or files |
+| GET | `/api/hr/summary` | HR | 200, aggregate skill gaps, missing steps and participation |
+| GET | `/api/employees` | HR | 200, `{employees, total}` with recommendation statuses |
 
 Stubs return `status: not_implemented`. Recommendations return `source: fallback`
 unless a valid LLM selection is used (`source: llm`). Missing headers return 401,
 forbidden access 403, missing records
 404, and schema/header validation errors 422. Validation errors use FastAPI's
-standard `HTTPValidationError`; other errors use `{detail: string}`.
+standard `HTTPValidationError`. Import errors use `detail` entries with `loc`,
+`msg` and `type`; other errors use `{detail: string}`.
 
 See [JSON examples](docs/examples.md) and [exported OpenAPI](docs/openapi.json).
 See [recommendation scoring and LLM contract](docs/recommendations.md) for all
 weights, eligibility rules, response states and explanation validation.
+See [HR and import guide](docs/hr.md) and the ready-to-import
+[three-profile synthetic example](docs/import-example.json).
 
 ## Verification and OpenAPI export
 
@@ -97,5 +100,6 @@ uv run ruff format --check app scripts tests
 OpenAPI export does not start the app, read the dataset, or create a database.
 Tests use temporary databases and check authorization, validation, CORS,
 startup seeding, rollback, completion uniqueness, stub immutability, recommendation
-ranking traps, LLM failure/timeout handling, and OpenAPI consistency. LLM tests use
+ranking traps, HR aggregates, atomic JSON/file imports, immediate fallback recommendations
+for 3 imported profiles in under 2 seconds, LLM failures/timeouts, and OpenAPI consistency. LLM tests use
 mock HTTP transports and do not send dataset records to external services.

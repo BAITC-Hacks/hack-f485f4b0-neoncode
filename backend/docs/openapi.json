@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Career Quest API",
-    "description": "Career Quest. Recommendations use explicit scoring and validated LLM selection. HR summary is a stub. Completion and import return 501 without writes. All API routes require X-Role and X-Employee-Id; these headers are trusted development identities.",
+    "description": "Career Quest. Recommendations use explicit scoring and validated LLM selection. HR can import profiles/history and inspect aggregate skill gaps and participation. Completion is a stub returning 501. All API routes require X-Role and X-Employee-Id; these headers are trusted development identities.",
     "version": "0.1.0"
   },
   "paths": {
@@ -12,6 +12,7 @@
           "hr"
         ],
         "summary": "List Employees",
+        "description": "Employees ordered by ID, with local recommendation status; no employee ranking.",
         "operationId": "list_employees_api_employees_get",
         "parameters": [
           {
@@ -112,9 +113,9 @@
         "tags": [
           "hr"
         ],
-        "summary": "Import Data",
-        "description": "Validate the dataset-shaped payload without persisting it.",
-        "operationId": "import_data_api_import_post",
+        "summary": "Post Import",
+        "description": "Atomically upsert profiles and history; recommendations are immediately available.",
+        "operationId": "post_import_api_import_post",
         "parameters": [
           {
             "name": "x-role",
@@ -155,18 +156,8 @@
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ImportRequest"
-              }
-            }
-          }
-        },
         "responses": {
-          "501": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -207,11 +198,427 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Field validation or reference errors",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ImportValidationResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Uploaded file exceeds 10 MiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "meta": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "dataset": {
+                        "default": "Career Quest",
+                        "title": "Dataset",
+                        "type": "string"
+                      },
+                      "version": {
+                        "default": "1.0",
+                        "title": "Version",
+                        "type": "string"
+                      },
+                      "as_of_date": {
+                        "anyOf": [
+                          {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "As Of Date"
+                      },
+                      "synthetic": {
+                        "default": false,
+                        "title": "Synthetic",
+                        "type": "boolean"
+                      }
+                    },
+                    "title": "DatasetMeta",
+                    "type": "object"
+                  },
+                  "employees": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "synthetic": {
+                          "default": false,
+                          "title": "Synthetic",
+                          "type": "boolean"
+                        },
+                        "employee_id": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "pattern": "^\\S+$",
+                          "title": "Employee Id",
+                          "type": "string"
+                        },
+                        "role": {
+                          "minLength": 1,
+                          "title": "Role",
+                          "type": "string"
+                        },
+                        "grade": {
+                          "enum": [
+                            "Junior",
+                            "Middle",
+                            "Senior",
+                            "Lead"
+                          ],
+                          "title": "Grade",
+                          "type": "string"
+                        },
+                        "tenure_months": {
+                          "minimum": 0,
+                          "title": "Tenure Months",
+                          "type": "integer"
+                        },
+                        "skills": {
+                          "patternProperties": {
+                            "^\\S+$": {
+                              "maximum": 5,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "propertyNames": {
+                            "maxLength": 128,
+                            "minLength": 1
+                          },
+                          "title": "Skills",
+                          "type": "object"
+                        },
+                        "full_name": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Full Name"
+                        },
+                        "department": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Department"
+                        },
+                        "manager_id": {
+                          "anyOf": [
+                            {
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "pattern": "^\\S+$",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Manager Id"
+                        },
+                        "hire_date": {
+                          "anyOf": [
+                            {
+                              "format": "date",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Hire Date"
+                        },
+                        "work_format": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "office",
+                                "hybrid",
+                                "remote"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Work Format"
+                        },
+                        "preferred_language": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "kk",
+                                "ru",
+                                "en"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Preferred Language"
+                        },
+                        "career_goal": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "target_role": {
+                                  "title": "Target Role",
+                                  "type": "string"
+                                },
+                                "target_grade": {
+                                  "enum": [
+                                    "Junior",
+                                    "Middle",
+                                    "Senior",
+                                    "Lead"
+                                  ],
+                                  "title": "Target Grade",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "target_role",
+                                "target_grade"
+                              ],
+                              "title": "CareerGoal",
+                              "type": "object"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "last_review_date": {
+                          "anyOf": [
+                            {
+                              "format": "date",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Last Review Date"
+                        }
+                      },
+                      "required": [
+                        "employee_id",
+                        "role",
+                        "grade",
+                        "tenure_months",
+                        "skills"
+                      ],
+                      "title": "Employee",
+                      "type": "object"
+                    },
+                    "title": "Employees",
+                    "type": "array"
+                  },
+                  "history": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "synthetic": {
+                          "default": false,
+                          "title": "Synthetic",
+                          "type": "boolean"
+                        },
+                        "employee_id": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "pattern": "^\\S+$",
+                          "title": "Employee Id",
+                          "type": "string"
+                        },
+                        "event_id": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "pattern": "^\\S+$",
+                          "title": "Event Id",
+                          "type": "string"
+                        },
+                        "date": {
+                          "format": "date",
+                          "title": "Date",
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "completed",
+                            "in_progress",
+                            "dropped",
+                            "no_show",
+                            "declined",
+                            "overdue"
+                          ],
+                          "title": "Status",
+                          "type": "string"
+                        },
+                        "record_id": {
+                          "anyOf": [
+                            {
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "pattern": "^\\S+$",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Record Id"
+                        },
+                        "due_date": {
+                          "anyOf": [
+                            {
+                              "format": "date",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Due Date"
+                        },
+                        "completion_pct": {
+                          "anyOf": [
+                            {
+                              "maximum": 100,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Completion Pct"
+                        },
+                        "score": {
+                          "anyOf": [
+                            {
+                              "maximum": 100,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Score"
+                        },
+                        "feedback_rating": {
+                          "anyOf": [
+                            {
+                              "maximum": 5,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Feedback Rating"
+                        },
+                        "assigned_by": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "self",
+                                "manager",
+                                "hr"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Assigned By"
+                        }
+                      },
+                      "required": [
+                        "employee_id",
+                        "event_id",
+                        "date",
+                        "status"
+                      ],
+                      "title": "ActivityHistory",
+                      "type": "object"
+                    },
+                    "title": "History",
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "employees",
+                  "history"
+                ],
+                "title": "ImportRequest",
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "employees_file",
+                  "history_file"
+                ],
+                "properties": {
+                  "employees_file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "employees.json: dataset envelope or Employee array"
+                  },
+                  "history_file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "activity_history.csv or JSON history envelope/array"
+                  }
                 }
               }
             }
@@ -225,7 +632,7 @@
           "hr"
         ],
         "summary": "Get Summary",
-        "description": "Contract stub: null metrics have not been calculated.",
+        "description": "Aggregate current/next-grade gaps, missing steps and participation without ranking people.",
         "operationId": "get_summary_api_hr_summary_get",
         "parameters": [
           {
@@ -666,20 +1073,8 @@
   },
   "components": {
     "schemas": {
-      "ActivityHistory": {
+      "ActivityParticipation": {
         "properties": {
-          "synthetic": {
-            "type": "boolean",
-            "title": "Synthetic",
-            "default": false
-          },
-          "employee_id": {
-            "type": "string",
-            "maxLength": 128,
-            "minLength": 1,
-            "pattern": "^\\S+$",
-            "title": "Employee Id"
-          },
           "event_id": {
             "type": "string",
             "maxLength": 128,
@@ -687,114 +1082,68 @@
             "pattern": "^\\S+$",
             "title": "Event Id"
           },
-          "date": {
-            "type": "string",
-            "format": "date",
-            "title": "Date"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "completed",
-              "in_progress",
-              "dropped",
-              "no_show",
-              "declined",
-              "overdue"
-            ],
-            "title": "Status"
-          },
-          "record_id": {
+          "title": {
             "anyOf": [
               {
-                "type": "string",
-                "maxLength": 128,
-                "minLength": 1,
-                "pattern": "^\\S+$"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Record Id"
+            "title": "Title"
           },
-          "due_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Due Date"
+          "enrolled": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Enrolled",
+            "description": "All participation records, including completed ones"
           },
-          "completion_pct": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 100.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completion Pct"
+          "completed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Completed"
           },
-          "score": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 100.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Score"
+          "missed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Missed"
           },
-          "feedback_rating": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 5.0,
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Feedback Rating"
+          "declined": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Declined"
           },
-          "assigned_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "self",
-                  "manager",
-                  "hr"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Assigned By"
+          "in_progress": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "In Progress"
+          },
+          "dropped": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Dropped"
+          },
+          "overdue": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Overdue"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "employee_id",
           "event_id",
-          "date",
-          "status"
+          "title",
+          "enrolled",
+          "completed",
+          "missed",
+          "declined",
+          "in_progress",
+          "dropped",
+          "overdue"
         ],
-        "title": "ActivityHistory"
+        "title": "ActivityParticipation"
       },
       "Audience": {
         "properties": {
@@ -935,40 +1284,6 @@
           "skills"
         ],
         "title": "CompletionResponse"
-      },
-      "DatasetMeta": {
-        "properties": {
-          "dataset": {
-            "type": "string",
-            "title": "Dataset",
-            "default": "Career Quest"
-          },
-          "version": {
-            "type": "string",
-            "title": "Version",
-            "default": "1.0"
-          },
-          "as_of_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "As Of Date"
-          },
-          "synthetic": {
-            "type": "boolean",
-            "title": "Synthetic",
-            "default": false
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "DatasetMeta"
       },
       "Employee": {
         "properties": {
@@ -1133,11 +1448,265 @@
         ],
         "title": "Employee"
       },
+      "EmployeeListItem": {
+        "properties": {
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic",
+            "default": false
+          },
+          "employee_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^\\S+$",
+            "title": "Employee Id"
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Role"
+          },
+          "grade": {
+            "type": "string",
+            "enum": [
+              "Junior",
+              "Middle",
+              "Senior",
+              "Lead"
+            ],
+            "title": "Grade"
+          },
+          "tenure_months": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Tenure Months"
+          },
+          "skills": {
+            "patternProperties": {
+              "^\\S+$": {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 0.0
+              }
+            },
+            "propertyNames": {
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "type": "object",
+            "title": "Skills"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "manager_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^\\S+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Id"
+          },
+          "hire_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hire Date"
+          },
+          "work_format": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "office",
+                  "hybrid",
+                  "remote"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Format"
+          },
+          "preferred_language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "kk",
+                  "ru",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Language"
+          },
+          "career_goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CareerGoal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_review_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Review Date"
+          },
+          "recommendation_status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "no_suitable_event",
+              "requirements_met"
+            ],
+            "title": "Recommendation Status"
+          },
+          "next_grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Junior",
+                  "Middle",
+                  "Senior",
+                  "Lead"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Grade"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "employee_id",
+          "role",
+          "grade",
+          "tenure_months",
+          "skills",
+          "recommendation_status",
+          "next_grade"
+        ],
+        "title": "EmployeeListItem"
+      },
+      "EmployeeStep": {
+        "properties": {
+          "employee_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^\\S+$",
+            "title": "Employee Id"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "grade": {
+            "type": "string",
+            "enum": [
+              "Junior",
+              "Middle",
+              "Senior",
+              "Lead"
+            ],
+            "title": "Grade"
+          },
+          "next_grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Junior",
+                  "Middle",
+                  "Senior",
+                  "Lead"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Grade"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "employee_id",
+          "full_name",
+          "role",
+          "grade",
+          "next_grade"
+        ],
+        "title": "EmployeeStep"
+      },
       "EmployeesResponse": {
         "properties": {
           "employees": {
             "items": {
-              "$ref": "#/components/schemas/Employee"
+              "$ref": "#/components/schemas/EmployeeListItem"
             },
             "type": "array",
             "title": "Employees"
@@ -1155,6 +1724,31 @@
           "total"
         ],
         "title": "EmployeesResponse"
+      },
+      "EmployeesWithoutStep": {
+        "properties": {
+          "requirements_met": {
+            "items": {
+              "$ref": "#/components/schemas/EmployeeStep"
+            },
+            "type": "array",
+            "title": "Requirements Met"
+          },
+          "no_suitable_event": {
+            "items": {
+              "$ref": "#/components/schemas/EmployeeStep"
+            },
+            "type": "array",
+            "title": "No Suitable Event"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "requirements_met",
+          "no_suitable_event"
+        ],
+        "title": "EmployeesWithoutStep"
       },
       "ErrorResponse": {
         "properties": {
@@ -1294,75 +1888,76 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "ready",
-              "not_implemented"
-            ],
+            "const": "ready",
             "title": "Status"
           },
           "total_employees": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 0.0,
             "title": "Total Employees"
           },
           "total_events": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 0.0,
             "title": "Total Events"
           },
           "completed_activities": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 0.0,
             "title": "Completed Activities"
           },
           "employees_by_grade": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "integer"
-                },
-                "propertyNames": {
-                  "enum": [
-                    "Junior",
-                    "Middle",
-                    "Senior",
-                    "Lead"
-                  ]
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "Junior",
+                "Middle",
+                "Senior",
+                "Lead"
+              ]
+            },
+            "type": "object",
             "title": "Employees By Grade"
+          },
+          "current_grade_skill_gaps": {
+            "items": {
+              "$ref": "#/components/schemas/SkillDeficiency"
+            },
+            "type": "array",
+            "title": "Current Grade Skill Gaps"
+          },
+          "next_grade_skill_gaps": {
+            "items": {
+              "$ref": "#/components/schemas/SkillDeficiency"
+            },
+            "type": "array",
+            "title": "Next Grade Skill Gaps"
+          },
+          "employees_without_step": {
+            "$ref": "#/components/schemas/EmployeesWithoutStep"
+          },
+          "participation_by_event": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityParticipation"
+            },
+            "type": "array",
+            "title": "Participation By Event"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "status"
+          "status",
+          "total_employees",
+          "total_events",
+          "completed_activities",
+          "employees_by_grade",
+          "current_grade_skill_gaps",
+          "next_grade_skill_gaps",
+          "employees_without_step",
+          "participation_by_event"
         ],
         "title": "HRSummaryResponse"
       },
@@ -1379,42 +1974,45 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "ImportRequest": {
+      "ImportFieldError": {
         "properties": {
-          "meta": {
-            "$ref": "#/components/schemas/DatasetMeta"
-          },
-          "employees": {
+          "loc": {
             "items": {
-              "$ref": "#/components/schemas/Employee"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
             },
             "type": "array",
-            "title": "Employees"
+            "title": "Loc"
           },
-          "history": {
-            "items": {
-              "$ref": "#/components/schemas/ActivityHistory"
-            },
-            "type": "array",
-            "title": "History"
+          "msg": {
+            "type": "string",
+            "title": "Msg"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "employees",
-          "history"
+          "loc",
+          "msg",
+          "type"
         ],
-        "title": "ImportRequest"
+        "title": "ImportFieldError"
       },
       "ImportResponse": {
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "imported",
-              "not_implemented"
-            ],
+            "const": "imported",
             "title": "Status"
           },
           "employees_received": {
@@ -1436,6 +2034,26 @@
             "type": "integer",
             "minimum": 0.0,
             "title": "History Imported"
+          },
+          "employees_created": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Employees Created"
+          },
+          "employees_updated": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Employees Updated"
+          },
+          "history_created": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "History Created"
+          },
+          "history_updated": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "History Updated"
           }
         },
         "additionalProperties": false,
@@ -1445,9 +2063,30 @@
           "employees_received",
           "history_received",
           "employees_imported",
-          "history_imported"
+          "history_imported",
+          "employees_created",
+          "employees_updated",
+          "history_created",
+          "history_updated"
         ],
         "title": "ImportResponse"
+      },
+      "ImportValidationResponse": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ImportFieldError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ImportValidationResponse"
       },
       "Recommendation": {
         "properties": {
@@ -1706,6 +2345,46 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ScoringWeights"
+      },
+      "SkillDeficiency": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^\\S+$",
+            "title": "Skill Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "employees_affected": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Employees Affected"
+          },
+          "employees_assessed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Employees Assessed"
+          },
+          "total_deficit": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Deficit"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name",
+          "employees_affected",
+          "employees_assessed",
+          "total_deficit"
+        ],
+        "title": "SkillDeficiency"
       },
       "SkillGain": {
         "properties": {

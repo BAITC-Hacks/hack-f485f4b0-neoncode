@@ -102,36 +102,43 @@ JSON objects using the activity history CSV column names:
 }
 ```
 
-501 response (nothing is imported):
+200 response for a first import:
 
 ```json
 {
-  "status": "not_implemented",
+  "status": "imported",
   "employees_received": 1,
   "history_received": 1,
-  "employees_imported": 0,
-  "history_imported": 0
+  "employees_imported": 1,
+  "history_imported": 1,
+  "employees_created": 1,
+  "employees_updated": 0,
+  "history_created": 1,
+  "history_updated": 0
 }
 ```
 
 ## GET /api/hr/summary
 
-HR-only 200 response:
+HR-only 200 response excerpt for the original fixtures (the full response also
+contains `employees_by_grade`, `current_grade_skill_gaps`, `next_grade_skill_gaps`,
+`employees_without_step` and `participation_by_event`):
 
 ```json
 {
-  "status": "not_implemented",
-  "total_employees": null,
-  "total_events": null,
-  "completed_activities": null,
-  "employees_by_grade": null
+  "status": "ready",
+  "total_employees": 10,
+  "total_events": 8,
+  "completed_activities": 6
 }
 ```
 
 ## GET /api/employees
 
 HR-only 200 response: `{"employees": [Employee, ...], "total": 10}` for the
-default fixtures. Each item uses the complete Employee shape shown above.
+default fixtures. Each item extends the Employee shape with `recommendation_status`
+(`ready`, `requirements_met`, `no_suitable_event`) and `next_grade` (or null).
+Employees are sorted by ID, not performance. See [HR and import guide](hr.md).
 
 ## Event and skill contracts
 

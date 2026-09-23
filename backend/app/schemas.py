@@ -7,6 +7,7 @@ Identifier = Annotated[str, Field(min_length=1, max_length=128, pattern=r"^\S+$"
 SkillLevel = Annotated[int, Field(strict=True, ge=0, le=5)]
 Grade = Literal["Junior", "Middle", "Senior", "Lead"]
 Source = Literal["fallback", "llm"]
+RecommendationStatus = Literal["ready", "no_suitable_event", "requirements_met"]
 
 
 class Schema(BaseModel):
@@ -124,6 +125,11 @@ class EmployeesFile(Schema):
     employees: list[Employee]
 
 
+class HistoryFile(Schema):
+    meta: DatasetMeta = Field(default_factory=DatasetMeta)
+    history: list[ActivityHistory]
+
+
 class EventsFile(Schema):
     meta: DatasetMeta = Field(default_factory=DatasetMeta)
     events: list[Event]
@@ -191,7 +197,7 @@ class Recommendation(Schema):
 
 class RecommendationsResponse(Schema):
     employee_id: Identifier
-    status: Literal["ready", "no_suitable_event", "requirements_met"]
+    status: RecommendationStatus
     source: Source
     next_grade: Grade | None
     recommendations: list[Recommendation]
@@ -218,23 +224,79 @@ class ImportRequest(Schema):
 
 
 class ImportResponse(Schema):
-    status: Literal["imported", "not_implemented"]
+    status: Literal["imported"]
     employees_received: int = Field(ge=0)
     history_received: int = Field(ge=0)
     employees_imported: int = Field(ge=0)
     history_imported: int = Field(ge=0)
+    employees_created: int = Field(ge=0)
+    employees_updated: int = Field(ge=0)
+    history_created: int = Field(ge=0)
+    history_updated: int = Field(ge=0)
+
+
+class ImportFieldError(Schema):
+    loc: list[str | int]
+    msg: str
+    type: str
+
+
+class ImportValidationResponse(Schema):
+    detail: list[ImportFieldError]
+
+
+class SkillDeficiency(Schema):
+    skill_id: Identifier
+    name: str
+    employees_affected: int = Field(ge=0)
+    employees_assessed: int = Field(ge=0)
+    total_deficit: int = Field(ge=0)
+
+
+class EmployeeStep(Schema):
+    employee_id: Identifier
+    full_name: str | None
+    role: str
+    grade: Grade
+    next_grade: Grade | None
+
+
+class EmployeesWithoutStep(Schema):
+    requirements_met: list[EmployeeStep]
+    no_suitable_event: list[EmployeeStep]
+
+
+class ActivityParticipation(Schema):
+    event_id: Identifier
+    title: str | None
+    enrolled: int = Field(ge=0, description="All participation records, including completed ones")
+    completed: int = Field(ge=0)
+    missed: int = Field(ge=0)
+    declined: int = Field(ge=0)
+    in_progress: int = Field(ge=0)
+    dropped: int = Field(ge=0)
+    overdue: int = Field(ge=0)
 
 
 class HRSummaryResponse(Schema):
-    status: Literal["ready", "not_implemented"]
-    total_employees: int | None = Field(default=None, ge=0)
-    total_events: int | None = Field(default=None, ge=0)
-    completed_activities: int | None = Field(default=None, ge=0)
-    employees_by_grade: dict[Grade, int] | None = None
+    status: Literal["ready"]
+    total_employees: int = Field(ge=0)
+    total_events: int = Field(ge=0)
+    completed_activities: int = Field(ge=0)
+    employees_by_grade: dict[Grade, int]
+    current_grade_skill_gaps: list[SkillDeficiency]
+    next_grade_skill_gaps: list[SkillDeficiency]
+    employees_without_step: EmployeesWithoutStep
+    participation_by_event: list[ActivityParticipation]
+
+
+class EmployeeListItem(Employee):
+    recommendation_status: RecommendationStatus
+    next_grade: Grade | None
 
 
 class EmployeesResponse(Schema):
-    employees: list[Employee]
+    employees: list[EmployeeListItem]
     total: int = Field(ge=0)
 
 
